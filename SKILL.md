@@ -125,8 +125,9 @@ When a user says any of the following, one or more skills apply:
 ```yaml
 skill: bookkeeping
 version: 3.2
-author: Receiptor AI (upstream, https://receiptor.ai); fork maintained by hamishfromatech
+author: The A-Tech Corporation PTY LTD (fork, https://atech.industries); original work by Receiptor AI (https://receiptor.ai)
 license: MIT
+community: https://www.skool.com/open-source-ai-builders-club/about
 capabilities:
   - bookkeeping-setup
   - income-invoicing
