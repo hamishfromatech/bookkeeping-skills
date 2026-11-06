@@ -31,6 +31,8 @@ EXPECTED_TOOLS = {
     "ar_aging",
     "calculate",
     "run_python",
+    "acc_work_levy_rates",
+    "acc_levy_estimate",
 }
 
 
@@ -197,3 +199,42 @@ async def test_unknown_skill_resource_raises(server):
     async with Client(server) as client:
         with pytest.raises(Exception, match="Unknown skill"):
             await client.read_resource("skill://does-not-exist")
+
+
+async def test_acc_work_levy_rates(server):
+    async with Client(server) as client:
+        result = await call(client, "acc_work_levy_rates", {"trade": "roofing"})
+    assert result["year"] == "2026/27"
+    assert result["matched"] >= 1
+    assert result["rows"][0]["cu"] == "42230"
+    assert result["rows"][0]["rate_per_100"] == 2.25
+    assert "excluding GST" in result["basis"]
+
+
+async def test_acc_work_levy_rates_full_schedule(server):
+    async with Client(server) as client:
+        result = await call(client, "acc_work_levy_rates", {})
+    assert result["matched"] == 28
+
+
+async def test_acc_levy_estimate_uses_trade_rate(server):
+    async with Client(server) as client:
+        result = await call(
+            client, "acc_levy_estimate", {"liable_income": 120000, "trade": "carpenter"}
+        )
+    assert result["cu"] == "42420"
+    assert result["work_levy"]["amount"] == 2112.0
+    assert result["earners_levy"]["amount"] == 1824.0
+    assert result["total_including_gst"] == 4526.4
+
+
+async def test_acc_levy_estimate_rejects_ambiguous_trade(server):
+    async with Client(server) as client:
+        with pytest.raises(Exception, match="matched"):
+            await call(client, "acc_levy_estimate", {"liable_income": 100000, "trade": "construction"})
+
+
+async def test_acc_levy_estimate_rejects_unknown_trade(server):
+    async with Client(server) as client:
+        with pytest.raises(Exception, match="No ACC classification unit"):
+            await call(client, "acc_levy_estimate", {"liable_income": 100000, "trade": "zzzz"})

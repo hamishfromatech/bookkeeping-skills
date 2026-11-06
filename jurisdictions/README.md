@@ -10,7 +10,7 @@ Use this folder when a skill needs rules for a specific country or tax system. E
 |---|---|---|---|
 | United States | Active baseline | [us.md](us.md) | Schedule C mapping, 1099-NEC readiness, estimated taxes, depreciation/§179/bonus, meals, vehicle, home office |
 | Australia | Active | [au.md](au.md) | GST and BAS, instant asset write-off, cents-per-km and logbook, WFH fixed rate, PAYG, TPAR, superannuation |
-| New Zealand | Active | [nz.md](nz.md) | GST returns and taxable supply information, ACC earners' levy, provisional tax, kilometre rates, square metre rate, low-value assets, schedular payments, KiwiSaver |
+| New Zealand | Active | [nz.md](nz.md) | GST returns and taxable supply information, ACC earners' levy, provisional tax, ACC work levy by trade, kilometre rates, square metre rate, low-value assets, schedular payments, KiwiSaver |
 
 ## Agent policy
 

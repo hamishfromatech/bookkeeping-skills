@@ -35,7 +35,7 @@ General bookkeeping workflow lives in the skill files. Jurisdiction-specific tax
 |---|---|---|
 | United States | [jurisdictions/us.md](jurisdictions/us.md) | Schedule C mapping, 1099-NEC readiness, estimated taxes, depreciation, meals, vehicle, home office |
 | Australia | [jurisdictions/au.md](jurisdictions/au.md) | GST and BAS, instant asset write-off, cents-per-km and logbook, WFH fixed rate, PAYG, TPAR, super |
-| New Zealand | [jurisdictions/nz.md](jurisdictions/nz.md) | GST returns and taxable supply information, provisional tax, ACC levies, kilometre rates, square metre rate, low-value assets, schedular payments, KiwiSaver |
+| New Zealand | [jurisdictions/nz.md](jurisdictions/nz.md) | GST returns and taxable supply information, provisional tax, ACC levies and the tradie work-levy schedule, kilometre rates, square metre rate, low-value assets, schedular payments, KiwiSaver |
 
 If the user's jurisdiction is unknown, continue only with jurisdiction-neutral work: evidence capture, transaction normalization, source trails, review queues, and reconciliation structure. Ask for jurisdiction before applying tax-specific rules.
 

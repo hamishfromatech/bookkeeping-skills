@@ -283,3 +283,189 @@ def search_constants(jurisdiction: Jurisdiction, query: str | None = None) -> li
     matched = [(s, row) for s, row in scored if s > 0]
     matched.sort(key=lambda pair: (-pair[0], pair[1].topic))
     return [row for _score, row in matched]
+
+
+# ---------------------------------------------------------------------------
+# ACC work levy schedule (New Zealand)
+# ---------------------------------------------------------------------------
+
+ACC_SECTION_RE = re.compile(r"^##\s+ACC work levy.*$", re.IGNORECASE | re.MULTILINE)
+CU_RE = re.compile(r"^\d{4,5}$")
+RATE_RE = re.compile(r"^\d+(?:\.\d+)?$")
+
+
+@dataclass(frozen=True)
+class LevyRow:
+    cu: str
+    classification: str
+    rate: float
+
+    def to_dict(self) -> dict:
+        return {
+            "cu": self.cu,
+            "classification": self.classification,
+            "rate_per_100": self.rate,
+        }
+
+
+@dataclass(frozen=True)
+class AccLevySchedule:
+    year: str
+    source_url: str | None
+    basis: str
+    rows: tuple[LevyRow, ...]
+
+    def to_summary(self) -> dict:
+        return {
+            "year": self.year,
+            "source_url": self.source_url,
+            "basis": self.basis,
+            "count": len(self.rows),
+        }
+
+
+def parse_acc_work_levy(path: Path) -> AccLevySchedule:
+    """Parse the ``## ACC work levy`` schedule out of a jurisdiction pack.
+
+    Returns every classification unit in that section, in file order.
+    """
+    text = path.read_text(encoding="utf-8")
+    heading = ACC_SECTION_RE.search(text)
+    if not heading:
+        raise RepositoryError(f"{path.name} has no '## ACC work levy' section")
+
+    body = text[heading.end() :]
+    next_heading = re.search(r"^##\s+", body, re.MULTILINE)
+    section = body[: next_heading.start()] if next_heading else body
+
+    year_match = re.search(r"\((\d{4}[/-]\d{2,4})\)", heading.group(0))
+    year = year_match.group(1) if year_match else "unknown"
+
+    link = LINK_RE.search(section)
+    basis = "per $100 of liable earnings"
+    if "excluding GST" in section or "exclusive of GST" in section:
+        basis = "per $100 of liable earnings, excluding GST"
+
+    rows: list[LevyRow] = []
+    for line in section.splitlines():
+        cells = _split_row(line)
+        if len(cells) < 3 or _is_separator(cells):
+            continue
+        cu = _strip_markup(cells[0])
+        name = _strip_markup(cells[1])
+        rate_text = _strip_markup(cells[2])
+        if not CU_RE.match(cu) or not RATE_RE.match(rate_text):
+            continue
+        rows.append(LevyRow(cu=cu, classification=name, rate=float(rate_text)))
+
+    if not rows:
+        raise RepositoryError(f"{path.name} has an ACC work levy section with no rate rows")
+
+    return AccLevySchedule(
+        year=year,
+        source_url=link.group(2) if link else None,
+        basis=basis,
+        rows=tuple(rows),
+    )
+
+
+def get_acc_levy_schedule(root: Path | None = None, jurisdiction: str = "nz") -> AccLevySchedule:
+    pack = get_jurisdiction(jurisdiction, root)
+    return parse_acc_work_levy(pack.path)
+
+
+# Tradies search by job title ("sparky", "roofer"), while ACC names CUs by
+# activity ("Electrical services", "Roofing services"). These are search
+# synonyms only — they are NOT ACC classifications and carry no legal weight.
+# Where a job title genuinely spans two CUs, list both so the caller is forced
+# to disambiguate rather than being given a plausible-looking guess.
+TRADE_ALIASES: dict[str, tuple[str, ...]] = {
+    "carpenter": ("42420",),
+    "carpentry": ("42420",),
+    "chippy": ("42420",),
+    "builder": ("41110", "42420"),
+    "builders": ("41110", "42420"),
+    "plumber": ("42310",),
+    "plumbing": ("42310",),
+    "plumbie": ("42310",),
+    "gasfitter": ("42310",),
+    "drainlayer": ("42310",),
+    "electrician": ("42320",),
+    "sparky": ("42320",),
+    "electrical": ("42320",),
+    "roofer": ("42230",),
+    "roofing": ("42230",),
+    "bricklayer": ("42220",),
+    "brickie": ("42220",),
+    "blocklayer": ("42220",),
+    "mason": ("42220",),
+    "concreter": ("42210",),
+    "concreting": ("42210",),
+    "tiler": ("42430",),
+    "tiling": ("42430",),
+    "carpet layer": ("42430",),
+    "painter": ("42440",),
+    "painting": ("42440",),
+    "decorator": ("42440",),
+    "plasterer": ("42410",),
+    "plastering": ("42410",),
+    "gib stopper": ("42410",),
+    "glazier": ("42450",),
+    "glazing": ("42450",),
+    "landscaper": ("42510",),
+    "landscaping": ("42510",),
+    "steel erector": ("42240",),
+    "structural steel": ("42240",),
+    "rigger": ("42240",),
+    "earthmover": ("42100",),
+    "excavator": ("42100",),
+    "digger driver": ("42100",),
+    "handyman": ("42590",),
+    "hvac": ("42330",),
+    "air conditioning": ("42330",),
+    "refrigeration": ("42330",),
+    "alarm installer": ("42341",),
+    "security installer": ("42341",),
+    "fire systems": ("42341",),
+    "developer": ("42595",),
+    "property developer": ("42595",),
+    "steel fabricator": ("27410",),
+    "roading": ("41210",),
+    "civil": ("41220",),
+}
+
+
+def search_levy_rows(schedule: AccLevySchedule, query: str | None = None) -> list[LevyRow]:
+    """Find a classification unit by CU code or by trade name."""
+    rows = list(schedule.rows)
+    if not query:
+        return rows
+
+    text = query.strip().lower()
+    exact = [row for row in rows if row.cu == text]
+    if exact:
+        return exact
+
+    # job-title synonyms first, so "sparky" finds Electrical services
+    aliased: list[str] = []
+    for alias, codes in TRADE_ALIASES.items():
+        if re.search(rf"\b{re.escape(alias)}\b", text):
+            for code in codes:
+                if code not in aliased:
+                    aliased.append(code)
+    if aliased:
+        picked = [row for code in aliased for row in rows if row.cu == code]
+        if picked:
+            return sorted(picked, key=lambda row: row.classification)
+
+    terms = [t for t in re.split(r"[\s,]+", text) if t]
+    scored = []
+    for row in rows:
+        haystack = f"{row.cu} {row.classification}".lower()
+        hits = [t for t in terms if t in haystack]
+        if not hits:
+            continue
+        score = len(hits) + (1.0 if text in row.classification.lower() else 0.0)
+        scored.append((score, row))
+    scored.sort(key=lambda pair: (-pair[0], pair[1].classification))
+    return [row for _score, row in scored]

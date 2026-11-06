@@ -30,11 +30,15 @@ from . import calc
 from .constants import (
     RepositoryError,
     find_repo_root,
+    get_acc_levy_schedule,
     get_jurisdiction,
     load_jurisdictions,
     search_constants,
+    search_levy_rows,
 )
 from .models import (
+    AccLevyEstimate,
+    AccLevyRates,
     AgingResult,
     AllocationResult,
     ConstantsResult,
@@ -43,6 +47,7 @@ from .models import (
     ExecutionResult,
     JurisdictionList,
     JurisdictionSummary,
+    LevyRowOut,
     LineCheckResult,
     ReconciliationResult,
     SalesTaxResult,
@@ -480,6 +485,111 @@ def build_server(root: Path | None = None) -> FastMCP:
         treat this as a security boundary against hostile code.
         """
         return ExecutionResult(**exec_python(code, timeout_seconds))
+
+    # ------------------------------------------------------- ACC work levy (NZ)
+
+    @mcp.tool()
+    def acc_work_levy_rates(
+        trade: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Trade name or CU number, e.g. 'carpentry', 'plumber', 'roofing', '42420'. "
+                    "Omit for the full schedule."
+                )
+            ),
+        ] = None,
+    ) -> AccLevyRates:
+        """New Zealand ACC work levy rates by classification unit.
+
+        Rates are per $100 of liable earnings excluding GST, as published in the
+        Work Account Levies Regulations. The rate is risk-rated by trade, so a
+        roofer and an electrician on the same income pay very different levies.
+        """
+        try:
+            schedule = get_acc_levy_schedule(repo_root)
+        except RepositoryError as exc:
+            raise _repo_error(exc) from exc
+
+        rows = search_levy_rows(schedule, trade)
+        note = None
+        if trade and not rows:
+            note = (
+                "No classification unit matched. Call without 'trade' for the full "
+                "schedule, or pass the CU number."
+            )
+
+        return AccLevyRates(
+            jurisdiction="nz",
+            year=schedule.year,
+            basis=schedule.basis,
+            source_url=schedule.source_url,
+            matched=len(rows),
+            rows=[LevyRowOut(**row.to_dict()) for row in rows],
+            note=note,
+        )
+
+    @mcp.tool()
+    def acc_levy_estimate(
+        liable_income: Annotated[float, Field(description="Annual liable earnings before ACC levies")],
+        trade: Annotated[
+            str, Field(description="Trade name or CU number, e.g. 'carpentry' or '42420'")
+        ],
+        include_gst: Annotated[bool, Field(description="Add 15% GST, as ACC invoices it")] = True,
+    ) -> AccLevyEstimate:
+        """Estimate the two New Zealand self-employed ACC levies.
+
+        Combines the trade-specific work levy with the flat earners' levy. The
+        earners' levy is capped at the maximum liable earnings from the pack; the
+        work levy cap is not applied.
+        """
+        try:
+            schedule = get_acc_levy_schedule(repo_root)
+            pack = get_jurisdiction("nz", repo_root)
+        except RepositoryError as exc:
+            raise _repo_error(exc) from exc
+
+        rows = search_levy_rows(schedule, trade)
+        if not rows:
+            raise ValueError(
+                f"No ACC classification unit matched {trade!r}. "
+                "Call acc_work_levy_rates without a trade to see the schedule."
+            )
+        if len(rows) > 1:
+            names = "; ".join(f"{r.cu} {r.classification}" for r in rows[:5])
+            raise ValueError(
+                f"{trade!r} matched {len(rows)} classification units. Be more specific or pass "
+                f"a CU number. Matches: {names}"
+            )
+
+        row = rows[0]
+        earners_rate = None
+        max_earnings = None
+        for constant in pack.rows:
+            topic = constant.topic.lower()
+            if "earners' levy rate (excluding gst)" in topic and constant.numbers:
+                earners_rate = constant.numbers[0]
+            elif topic.startswith("acc maximum liable earnings") and constant.numbers:
+                max_earnings = constant.numbers[0]
+
+        if earners_rate is None or max_earnings is None:
+            raise ValueError(
+                "The NZ pack is missing the earners' levy rate or the maximum liable "
+                "earnings; add them to jurisdictions/nz.md before estimating."
+            )
+
+        result = calc.acc_levy(
+            liable_income,
+            work_levy_rate_per_100=row.rate,
+            earners_levy_rate_per_100=earners_rate,
+            max_liable_earnings=max_earnings,
+            include_gst=include_gst,
+        )
+        return AccLevyEstimate(
+            cu=row.cu,
+            classification=row.classification,
+            **result,
+        )
 
     return mcp
 

@@ -165,3 +165,51 @@ def test_search_prefers_topic_matches(repo_root: Path):
     pack = get_jurisdiction("nz", repo_root)
     hits = search_constants(pack, "provisional tax")
     assert "provisional tax" in hits[0].topic.lower(), hits[0].topic
+
+
+def test_acc_work_levy_schedule_parses(repo_root: Path):
+    from bookkeeping_mcp.constants import get_acc_levy_schedule
+
+    schedule = get_acc_levy_schedule(repo_root)
+    assert schedule.year == "2026/27"
+    assert "excluding GST" in schedule.basis
+    assert schedule.source_url and "legislation.govt.nz" in schedule.source_url
+    assert len(schedule.rows) == 28
+
+
+def test_acc_work_levy_known_rates(repo_root: Path):
+    from bookkeeping_mcp.constants import get_acc_levy_schedule
+
+    by_cu = {row.cu: row for row in get_acc_levy_schedule(repo_root).rows}
+    assert by_cu["42420"].classification == "Carpentry services"
+    assert by_cu["42420"].rate == 1.76
+    assert by_cu["42230"].rate == 2.25          # roofing — highest construction rate
+    assert by_cu["42320"].rate == 0.68          # electrical — low risk
+    assert by_cu["42595"].rate == 0.40          # all trades subcontracted
+
+
+def test_acc_work_levy_search_by_name_and_code(repo_root: Path):
+    from bookkeeping_mcp.constants import get_acc_levy_schedule, search_levy_rows
+
+    schedule = get_acc_levy_schedule(repo_root)
+    assert [r.cu for r in search_levy_rows(schedule, "42420")] == ["42420"]
+    assert search_levy_rows(schedule, "plumber")[0].cu == "42310"
+    assert search_levy_rows(schedule, "zzzz") == []
+
+
+def test_job_title_aliases_resolve(repo_root: Path):
+    from bookkeeping_mcp.constants import get_acc_levy_schedule, search_levy_rows
+
+    schedule = get_acc_levy_schedule(repo_root)
+    assert [r.cu for r in search_levy_rows(schedule, "sparky")] == ["42320"]
+    assert [r.cu for r in search_levy_rows(schedule, "roofer")] == ["42230"]
+    assert [r.cu for r in search_levy_rows(schedule, "chippy")] == ["42420"]
+    assert [r.cu for r in search_levy_rows(schedule, "brickie")] == ["42220"]
+
+
+def test_ambiguous_job_title_returns_every_candidate(repo_root: Path):
+    from bookkeeping_mcp.constants import get_acc_levy_schedule, search_levy_rows
+
+    schedule = get_acc_levy_schedule(repo_root)
+    cus = {r.cu for r in search_levy_rows(schedule, "builder")}
+    assert cus == {"41110", "42420"}

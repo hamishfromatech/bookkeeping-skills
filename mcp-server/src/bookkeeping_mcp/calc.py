@@ -771,3 +771,79 @@ def ar_aging(records, as_of=None) -> dict:
             buckets["1-30"] + buckets["31-60"] + buckets["61-90"] + buckets["90-plus"]
         ),
     }
+
+
+# --------------------------------------------------------------------------
+# New Zealand ACC levies
+# --------------------------------------------------------------------------
+
+
+def acc_levy(
+    liable_income,
+    work_levy_rate_per_100,
+    earners_levy_rate_per_100,
+    max_liable_earnings,
+    gst_rate_percent=15.0,
+    include_gst=True,
+) -> dict:
+    """Estimate the two ACC self-employed levies.
+
+    ``work_levy_rate_per_100`` comes from the business's classification unit;
+    ``earners_levy_rate_per_100`` is flat. Rates are expected excluding GST.
+
+    The earners' levy is capped at ``max_liable_earnings``. The work levy cap is
+    *not* applied — ACC's Work Account maximum is stated separately and must be
+    confirmed before an invoice is relied on.
+    """
+    income = to_decimal(liable_income, "liable_income")
+    work_rate = to_decimal(work_levy_rate_per_100, "work_levy_rate_per_100")
+    earners_rate = to_decimal(earners_levy_rate_per_100, "earners_levy_rate_per_100")
+    cap = to_decimal(max_liable_earnings, "max_liable_earnings")
+    gst_rate = to_rate(gst_rate_percent, "gst_rate_percent")
+
+    if income < 0:
+        raise MoneyError("liable_income must be zero or positive")
+    if work_rate < 0 or earners_rate < 0:
+        raise MoneyError("levy rates must be zero or positive")
+    if cap <= 0:
+        raise MoneyError("max_liable_earnings must be greater than zero")
+
+    work_levy = quantize(income / HUNDRED * work_rate, 2)
+    earners_base = min(income, cap)
+    earners_levy = quantize(earners_base / HUNDRED * earners_rate, 2)
+    subtotal = quantize(work_levy + earners_levy, 2)
+
+    gst = quantize(pct_of(subtotal, gst_rate), 2) if include_gst else Decimal("0")
+    total = quantize(subtotal + gst, 2)
+
+    capped = income > cap
+    notes = [
+        "rates are per $100 of liable earnings, excluding GST",
+        "earners' levy capped at the maximum liable earnings",
+        "work levy cap not applied — confirm ACC's Work Account maximum before relying on this",
+        "IRD publishes $1.75 per $100 including GST, which is $1.5217 excluding GST; the "
+        "rounded $1.52 differs by a few dollars at the maximum",
+    ]
+    if capped:
+        notes.append(
+            f"liable income exceeds the earners' levy cap; only {money_str(cap)} is levied"
+        )
+
+    return {
+        "liable_income": _money(income),
+        "work_levy": {
+            "rate_per_100": as_number(quantize(work_rate, 4)),
+            "amount": _money(work_levy),
+        },
+        "earners_levy": {
+            "rate_per_100": as_number(quantize(earners_rate, 4)),
+            "levied_on": _money(earners_base),
+            "capped": capped,
+            "amount": _money(earners_levy),
+        },
+        "subtotal_excluding_gst": _money(subtotal),
+        "gst_percent": as_number(quantize(gst_rate, 2)),
+        "gst": _money(gst),
+        "total_including_gst": _money(total),
+        "notes": notes,
+    }

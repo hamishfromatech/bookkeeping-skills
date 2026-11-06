@@ -3,6 +3,35 @@
 All notable changes to this skill pack. Versions apply to the skill content, not
 to the repository as a product.
 
+## 3.4 — 2026-11-06
+
+### Added
+
+- **ACC work levy schedule for trades** in `jurisdictions/nz.md`. All 26
+  construction classification units (CU 41110–42595) for 2026/27, plus two
+  adjacent trades, transcribed from Schedule 2 of the
+  [Accident Compensation (Work Account Levies) Regulations 2025](https://www.legislation.govt.nz/regulation/public/2025/0017/12.0/whole.html).
+  Rates range from $0.40 (property developers, all trades subcontracted) to
+  $2.25 (bricklaying, roofing, structural steel erection).
+- `acc_work_levy_rates` and `acc_levy_estimate` MCP tools. Lookup accepts a CU
+  number, a trade name, or a job title (`sparky`, `roofer`, `brickie`,
+  `digger driver`); a title that spans two CUs (`builder`) returns both rather
+  than guessing. The estimate combines the trade work levy with the flat
+  earners' levy, applies the earners' cap, and adds GST.
+- Guidance on which CU applies to common situations (house builder vs
+  carpentry contractor, renovation, earthmoving, developers).
+
+### Changed
+
+- The ACC earners' levy is now two constants, excluding and including GST,
+  because ACC publishes the rate ex-GST ($1.52) while IRD quotes it inc-GST
+  ($1.75). The estimate tool reads the ex-GST rate and adds GST.
+
+### Validation
+
+- The validator now guards the ACC table: at least 20 rows, no duplicate CUs,
+  and every rate within a plausible $0–$10 per $100.
+
 ## 3.3 — 2026-11-06
 
 ### Added

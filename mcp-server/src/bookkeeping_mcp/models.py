@@ -133,3 +133,42 @@ class ExecutionResult(BaseModel):
     stdout: str
     stderr: str
     truncated: bool
+
+
+class LevyRowOut(BaseModel):
+    cu: str = Field(description="ACC classification unit number")
+    classification: str = Field(description="Classification unit name")
+    rate_per_100: float = Field(description="Work levy per $100 of liable earnings, excluding GST")
+
+
+class AccLevyRates(BaseModel):
+    jurisdiction: str
+    year: str
+    basis: str
+    source_url: str | None
+    matched: int
+    rows: list[LevyRowOut]
+    note: str | None = None
+
+
+class LevyComponent(BaseModel):
+    rate_per_100: float
+    amount: float
+
+
+class EarnersLevyComponent(LevyComponent):
+    levied_on: float
+    capped: bool
+
+
+class AccLevyEstimate(BaseModel):
+    cu: str
+    classification: str
+    liable_income: float
+    work_levy: LevyComponent
+    earners_levy: EarnersLevyComponent
+    subtotal_excluding_gst: float
+    gst_percent: float
+    gst: float
+    total_including_gst: float
+    notes: list[str] = Field(default_factory=list)

@@ -62,7 +62,8 @@ If entity type is unknown, draft records only and flag entity-specific treatment
 | GST rate | 2026-27 | **15%** | [IRD GST](https://www.ird.govt.nz/gst) | 2026-11-06 |
 | GST registration threshold | 2026-27 | **$60,000** taxable supplies in any 12-month period, or expected to exceed it | [IRD registering for GST](https://www.ird.govt.nz/gst/registering-for-gst) | 2026-11-06 |
 | Taxable supply information required | 2026-27 | Not required at or below **$200** (GST inclusive); required above $200; additional detail above $1,000 | [IRD taxable supply information](https://www.ird.govt.nz/gst/tax-invoices-for-gst) | 2026-11-06 |
-| ACC earners' levy rate | 2026-27 | **1.75%** of liable earnings | [IRD ACC earners' levy rates](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/acc-clients-and-carers/acc-earners-levy-rates) | 2026-11-06 |
+| ACC earners' levy rate (excluding GST) | 2026-27 | **$1.52 per $100** of liable earnings | [IRD ACC earners' levy rates](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/acc-clients-and-carers/acc-earners-levy-rates) | 2026-11-06 |
+| ACC earners' levy rate (including GST) | 2026-27 | **$1.75 per $100** of liable earnings (1.75%) | [IRD ACC earners' levy rates](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/acc-clients-and-carers/acc-earners-levy-rates) | 2026-11-06 |
 | ACC maximum liable earnings | 2026-27 | **$156,641** (maximum earners' levy $2,741.22) | [IRD ACC rates](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/acc-clients-and-carers/acc-earners-levy-rates) | 2026-11-06 |
 | Provisional tax threshold | 2026-27 | Required when residual income tax exceeds **$5,000** | [IRD provisional tax](https://www.ird.govt.nz/income-tax/provisional-tax) | 2026-11-06 |
 | Provisional tax — standard uplift | 2026-27 | **105%** of the prior year's residual income tax, or **110%** of the year before that once filed | [IRD provisional tax](https://www.ird.govt.nz/income-tax/provisional-tax) | 2026-11-06 |
@@ -89,6 +90,75 @@ Also not tabulated, because they depend on the taxpayer or move independently:
 - Student loan repayment thresholds
 - Working for Families and independent-earner tax credit thresholds
 - Any rate applying to a non-standard balance date
+
+## ACC work levy — trades (2026/27)
+
+ACC assigns every business a **classification unit (CU)** based on its BIC code and activity, and sets the Work Account levy rate per CU. The rate is the single biggest variable in a tradie's ACC invoice: in 2026/27 the construction CUs range from $0.40 to $2.25 per $100 of liable earnings.
+
+Rates below are **per $100 of liable earnings, excluding GST**, as published in Schedule 2 of the [Accident Compensation (Work Account Levies) Regulations 2025](https://www.legislation.govt.nz/regulation/public/2025/0017/12.0/whole.html). GST is added when ACC invoices.
+
+### Construction and trade services
+
+| CU number | Classification unit | Work levy per $100 (excl. GST) |
+|---|---|---|
+| 41110 | House construction | 1.53 |
+| 41120 | Residential building construction (not elsewhere classified) | 1.35 |
+| 41130 | Non-residential building construction | 1.35 |
+| 41210 | Road and bridge construction | 1.10 |
+| 41220 | Heavy and civil engineering construction (not elsewhere classified) | 0.87 |
+| 41221 | Utility and communications network construction and maintenance services | 0.67 |
+| 41222 | Land development and subdivision | 1.53 |
+| 42100 | Site preparation services | 1.53 |
+| 42101 | Hire of construction machinery and cranes with operator | 1.76 |
+| 42210 | Concreting services | 1.76 |
+| 42220 | Bricklaying services | 2.25 |
+| 42230 | Roofing services | 2.25 |
+| 42240 | Structural steel erection services | 2.25 |
+| 42310 | Plumbing services | 1.35 |
+| 42320 | Electrical services (including telecommunication services within buildings) | 0.68 |
+| 42330 | Air conditioning and heating services | 0.85 |
+| 42341 | Fire and security alarm installation services | 0.85 |
+| 42342 | Building installation services (not elsewhere classified) | 1.76 |
+| 42410 | Plastering and ceiling services | 1.76 |
+| 42420 | Carpentry services | 1.76 |
+| 42430 | Tiling and carpeting services | 1.76 |
+| 42440 | Painting and decorating services | 1.67 |
+| 42450 | Glazing services | 1.76 |
+| 42510 | Landscape construction services | 1.76 |
+| 42590 | Construction services (not elsewhere classified) | 1.76 |
+| 42595 | Construction services and property developers—all trades subcontracted | 0.40 |
+
+### Adjacent trades outside the construction division
+
+| CU number | Classification unit | Work levy per $100 (excl. GST) |
+|---|---|---|
+| 27410 | Structural steel fabricating | 1.48 |
+| 77430 | Heavy machinery and scaffolding rental and hiring | 1.43 |
+
+### How the levy is calculated
+
+```text
+work levy      = liable earnings ÷ 100 × CU rate
+earners' levy  = liable earnings ÷ 100 × 1.52   (capped at the maximum liable earnings)
+GST            = 15% of the levy subtotal
+```
+
+Two figures are commonly confused:
+
+- The **Work levy** is the CU rate above. It is risk-rated by trade.
+- The **Earners' levy** is flat for everyone: $1.52 per $100 excluding GST, which is $1.75 including GST — the figure IRD quotes as 1.75%.
+
+The Working Safer levy (WorkSafe funding) is collected through ACC's levy rather than billed separately in this schedule. Read the guidebook if you need the component split: [ACC Levy Guidebook 2026-2027](https://www.acc.co.nz/assets/business/Levy-Guidebook-2026-2027.pdf).
+
+### Choosing the right CU
+
+- **House construction (41110)** covers building a house for a client. A builder who contracts their own labour to another builder usually belongs in **Carpentry services (42420)** or **Construction services n.e.c. (42590)**, not 41110.
+- **Construction services and property developers—all trades subcontracted (42595)** is the low-rate CU ($0.40) for developers who sub-contract every trade. A builder who *does* the work cannot use it.
+- **Renovation and repair work** for a client generally follows the trade being performed, not 41110.
+- **Site preparation (42100)** and **Hire of construction machinery with operator (42101)** are different CUs with different rates — an earthmoving contractor may be in either.
+- A CU is not a self-assessment. ACC assigns it from your BIC code and description, and it can be reviewed. If the assigned CU looks wrong, query it with ACC rather than re-coding the books.
+
+> Rates are the published schedule for the 2026/27 tax year. Confirm the CU and rate against ACC's guidebook before relying on an invoice or a quote — and note that the schedule changes annually.
 
 ## Chart-of-accounts implications
 

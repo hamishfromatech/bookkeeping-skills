@@ -138,6 +138,15 @@ the IRS changed it mid-year:
 | `reconciliation_check` | Adjusted bank vs adjusted book, with diagnostics |
 | `ar_aging` | Receivables buckets from invoice records |
 
+### New Zealand ACC
+
+| Tool | What it does |
+|---|---|
+| `acc_work_levy_rates` | Work levy rates by classification unit, searched by trade name, job title (`sparky`, `roofer`, `brickie`) or CU number |
+| `acc_levy_estimate` | Work levy + earners' levy + GST from liable income and a trade |
+
+Rates come from the `ACC work levy` table in [`jurisdictions/nz.md`](../jurisdictions/nz.md), which mirrors Schedule 2 of the Work Account Levies Regulations 2025 for 2026/27. A job title that spans two CUs (`builder`) returns both and refuses to guess.
+
 ### Calculation
 
 | Tool | What it does |

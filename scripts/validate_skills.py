@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import re
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -217,9 +218,56 @@ def check_jurisdiction(path: Path) -> list[Finding]:
         if len(data_rows) < 3:
             findings.append(Finding("error", rel, "constants table has fewer than 2 data rows"))
 
+    findings.extend(_check_acc_levy_table(path, rel, text))
+
     for target in relative_links(text):
         if not (path.parent / target).resolve().exists():
             findings.append(Finding("error", rel, f"broken relative link: {target}"))
+
+    return findings
+
+
+def _check_acc_levy_table(path: Path, rel: str, text: str) -> list[Finding]:
+    """The ACC work-levy table is hand-maintained; guard it against rot."""
+    findings: list[Finding] = []
+    if "## ACC work levy" not in text:
+        return findings
+
+    section = text.split("## ACC work levy", 1)[1]
+    next_heading = re.search(r"^## ", section, re.MULTILINE)
+    if next_heading:
+        section = section[: next_heading.start()]
+
+    rows: list[tuple[str, float]] = []
+    for line in section.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        cu, rate = cells[0], cells[2]
+        if re.fullmatch(r"\d{4,5}", cu) and re.fullmatch(r"\d+(?:\.\d+)?", rate):
+            rows.append((cu, float(rate)))
+
+    if len(rows) < 20:
+        findings.append(
+            Finding("error", rel, f"ACC work levy table has only {len(rows)} rows; expected 20+")
+        )
+        return findings
+
+    counts = Counter(cu for cu, _rate in rows)
+    duplicates = sorted(cu for cu, n in counts.items() if n > 1)
+    if duplicates:
+        findings.append(
+            Finding("error", rel, f"duplicate classification units: {', '.join(duplicates)}")
+        )
+
+    for cu, rate in rows:
+        if not 0 < rate <= 10:
+            findings.append(
+                Finding("error", rel, f"CU {cu} has an implausible work levy rate: {rate}")
+            )
 
     return findings
 
