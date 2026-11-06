@@ -5,11 +5,11 @@ description: Match book entries against bank or credit card statements to find d
 license: MIT
 compatibility: Designed for skills-compatible agents with network access and access to bank statements, spreadsheets, or accounting exports.
 metadata:
-  version: "3.0"
+  version: "3.1"
   execution-mode: semi-automated
 allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - reconciliation
   - operations
@@ -241,7 +241,7 @@ Always reconcile in chronological order when catching up. Skipping months create
 
 ```yaml
 skill: bank-reconciliation
-version: 2.0
+version: 3.1
 input:
   - recorded transactions (ledger, accounting export, or receipt-processing output)
   - bank statement (CSV preferred, PDF acceptable)

@@ -1,9 +1,15 @@
 ---
 name: estimated-taxes
 title: Estimated tax payments
-description: Calculate and schedule quarterly estimated tax payments (Form 1040-ES) for self-employed individuals. Covers self-employment tax calculation (15.3%), income tax estimation, safe harbor rules (100%/110% of prior year), payment deadlines, and underpayment penalties. Trigger on "estimated taxes", "quarterly taxes", "1040-ES", "how much should I pay quarterly", "self-employment tax", "avoid tax penalty".
+description: Calculate and schedule quarterly estimated tax payments (Form 1040-ES) for self-employed individuals. Covers self-employment tax calculation, income tax estimation, safe harbour rules, payment deadlines, and underpayment penalties. Year-specific rates live in the US jurisdiction pack. Trigger on "estimated taxes", "quarterly taxes", "1040-ES", "how much should I pay quarterly", "self-employment tax", "avoid tax penalty".
+license: MIT
+compatibility: Designed for skills-compatible agents with access to categorized books, prior-year return figures, and the US jurisdiction pack.
+metadata:
+  version: "3.1"
+  execution-mode: semi-automated
+allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - tax
   - quarterly
@@ -52,29 +58,25 @@ Net Schedule C profit                               $100,000
 = Self-employment tax                               $14,130
 ```
 
-**Social Security cap:** The 12.4% Social Security portion applies only to the first **$168,600** of net self-employment income (2024 — adjusts annually). Income above this cap is taxed only at the 2.9% Medicare rate.
+**Social Security cap:** The 12.4% Social Security portion applies only up to the annual Social Security wage base. Read it from the constants table in [jurisdictions/us.md](../../jurisdictions/us.md) — it is re-indexed every year. Income above the cap is taxed only at the 2.9% Medicare rate.
+
+Also note the cap is applied to **combined** wages plus self-employment income. If the user also has a W-2 job, employer withholding may already have consumed part or all of the cap.
 
 **Additional Medicare tax:** If net self-employment income exceeds **$200,000** ($250,000 married filing jointly), an additional **0.9% Medicare surtax** applies on the excess.
 
-**Half is deductible:** 50% of your self-employment tax ($7,065 in the example above) is deducted on Form 1040 Line 15. This is an "above the line" deduction — you get it even if you don't itemize. This reduces your income tax (but not your SE tax).
+**Half is deductible:** 50% of your self-employment tax is an above-the-line deduction on Form 1040 — you get it even if you don't itemize. It reduces income tax but not self-employment tax. Refer to the deduction by name rather than by line number; the form is renumbered periodically.
 
 ### 2. Income tax (federal)
 
 Your Schedule C net profit (minus the above-the-line SE tax deduction, plus any other income, minus other deductions) is taxed at your marginal income tax rate.
 
-**2024 tax brackets (single):**
+**Do not use a memorised bracket table.** Brackets are re-indexed every year, and a stale table silently produces a wrong payment. Read the current-year brackets from the IRS (or use the Form 1040-ES worksheet), state the tax year used in the output, and cite the source.
 
-| Taxable income | Rate |
-|---|---|
-| $0 – $11,600 | 10% |
-| $11,601 – $47,150 | 12% |
-| $47,151 – $100,525 | 22% |
-| $100,526 – $191,950 | 24% |
-| $191,951 – $243,725 | 32% |
-| $243,726 – $609,350 | 35% |
-| $609,351+ | 37% |
+Brackets: <https://www.irs.gov/filing/federal-income-tax-rates-and-brackets>
 
-Don't forget: your self-employed health insurance deduction (Form 1040 Line 17), retirement contributions (Form 1040 Line 20), and the 50% SE tax deduction all reduce taxable income before applying these brackets.
+That also applies to the **standard deduction**, which is tabulated in [jurisdictions/us.md](../../jurisdictions/us.md) and changes annually.
+
+Don't forget: self-employed health insurance, retirement contributions, and the 50% SE tax deduction are all above-the-line and reduce taxable income **before** applying the brackets.
 
 ## Quick estimation method
 
@@ -155,3 +157,19 @@ If your income changes significantly during the year, adjust your remaining quar
 During the monthly close, calculate year-to-date net profit. Before each quarterly deadline, estimate the quarter's tax liability and compare against your safe harbor target. This prevents the "surprise" of a large underpayment at filing.
 
 Your monthly P&L from the monthly-close skill gives you the numbers you need. Multiply YTD net profit by your combined tax rate (SE tax + income tax marginal rate) and compare to payments made.
+
+## Agent metadata
+
+```yaml
+skill: estimated-taxes
+version: 3.1
+input: year-to-date net profit, prior-year return figures, payments made
+output: quarterly payment worksheet + safe harbour comparison
+jurisdiction: us
+automation_boundary: draft-and-flag
+approval_required_for:
+  - applying a treatment to a specific transaction
+  - filing or finalising a position
+next_steps:
+  - monthly-close
+```

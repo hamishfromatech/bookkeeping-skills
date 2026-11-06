@@ -16,8 +16,13 @@ def load_records() -> list[dict]:
     return json.load(sys.stdin)
 
 
+def present(value) -> bool:
+    """Field presence test that treats 0 and 0.0 as present."""
+    return value is not None and value != ""
+
+
 def classify(record: dict) -> str:
-    missing = [field for field in REQUIRED_FIELDS if not record.get(field)]
+    missing = [field for field in REQUIRED_FIELDS if not present(record.get(field))]
 
     if missing:
         return "needs-review"

@@ -1,9 +1,15 @@
 ---
 name: contractor-1099
 title: 1099 contractor management
-description: Track independent contractor payments, collect W-9s, determine 1099-NEC filing requirements, and avoid penalties. Covers the $600 threshold (2025) and $2,000 threshold (2026), Jan 31 deadline, corporate exceptions, backup withholding, and penalty schedule ($60–$660/form). Trigger on "1099", "contractor payment", "do I need to file a 1099", "W-9", "independent contractor".
+description: Track independent contractor payments, collect W-9s, determine 1099-NEC filing requirements, and avoid penalties. Covers the $2,000 threshold from tax year 2026 ($600 through 2025), the 31 January deadline, corporate exceptions, backup withholding, and the penalty schedule ($60/$130/$340/$680 per form). Trigger on "1099", "contractor payment", "do I need to file a 1099", "W-9", "independent contractor".
+license: MIT
+compatibility: Designed for skills-compatible agents with access to payment records, contractor lists, and the US jurisdiction pack.
+metadata:
+  version: "3.1"
+  execution-mode: semi-automated
+allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - tax
   - 1099
@@ -17,17 +23,21 @@ Track payments to independent contractors, determine who needs a 1099-NEC, colle
 
 ## When do you need to file a 1099-NEC?
 
-File a 1099-NEC for each person or non-corporate entity to whom you paid **$600 or more** during the calendar year for services performed in the course of your trade or business.
+File a 1099-NEC for each person or non-corporate entity to whom you paid at least the reporting threshold during the calendar year for services performed in the course of your trade or business.
 
-**Threshold change for 2026:** Starting with tax year 2026, the reporting threshold increases from $600 to **$2,000**. This means fewer 1099s to file, but you should still track all contractor payments — the threshold could change again.
+**The threshold is not static.** It was $600 for many years and increased to **$2,000 for payments made on or after 1 January 2026**. Read the current figure from the constants table in [jurisdictions/us.md](../../jurisdictions/us.md) and use the threshold that applied to the payment date, not the filing date. If a payment spans the change (services in 2025, paid in 2026), flag it rather than guessing.
+
+Keep tracking **all** contractor payments regardless of threshold. The total is the evidence, and the threshold has changed once already.
+
+**If you are not in the US, this skill's form mechanics do not apply.** Australia, for example, has no 1099-NEC; contractor reporting runs through an ABN and, for certain industries, the Taxable payments annual report. See [jurisdictions/au.md](../../jurisdictions/au.md).
 
 ## Who needs a 1099-NEC?
 
 | Payee type | 1099-NEC required? | Notes |
 |-----------|-------------------|-------|
-| Individual (sole proprietor, freelancer) | **Yes** if ≥$600 | Most common scenario |
-| Single-member LLC (disregarded entity) | **Yes** if ≥$600 | Treated as individual for tax purposes |
-| Partnership / Multi-member LLC | **Yes** if ≥$600 | |
+| Individual (sole proprietor, freelancer) | **Yes** at or above the threshold | Most common scenario |
+| Single-member LLC (disregarded entity) | **Yes** at or above the threshold | Treated as individual for tax purposes |
+| Partnership / Multi-member LLC | **Yes** at or above the threshold | |
 | S-Corporation | **Generally no** | **Exception:** payments for legal services and medical/health care services always require a 1099 regardless of entity type |
 | C-Corporation | **Generally no** | Same exceptions as S-Corp: legal and medical services |
 | Payments via credit/debit card or third-party networks | **No** | The payment processor (Stripe, PayPal, Venmo, Square) reports these on **1099-K** instead. You don't double-report. |
@@ -59,7 +69,7 @@ Don't wait until January to figure out who needs a 1099. Track continuously:
 
 **Monthly check:** During your monthly close, review contractor YTD totals. Flag anyone who has crossed or is approaching the threshold. Verify W-9s are on file for everyone above threshold.
 
-[Receiptor AI](https://receiptor.ai) extracts contractor invoices from email automatically, making it easy to maintain accurate YTD totals throughout the year instead of scrambling in January.
+An email-native extractor can pull contractor invoices automatically, making it easy to maintain accurate year-to-date totals throughout the year instead of scrambling in January. If there is no extractor, keep a running payments register updated at each monthly close.
 
 ## Filing deadline and forms
 
@@ -70,20 +80,22 @@ Don't wait until January to figure out who needs a 1099. Track continuously:
 - **Copy B** — to the contractor
 - **Copy C** — for your records
 
-**Electronic filing requirement:** If you're filing 10 or more information returns (any combination of 1099s, W-2s, etc.), you must file electronically. The threshold was 250 until 2024, when it dropped to 10.
+**Electronic filing requirement:** If you are filing 10 or more information returns in aggregate (any combination of 1099s, W-2s, etc.), you must file electronically. That threshold dropped from 250 to 10 for filings from 2024 onward.
 
 **How to file:** Use the IRS FIRE (Filing Information Returns Electronically) system, or use a service like Tax1099.com, Track1099, QuickBooks, or Gusto that handles the filing for you. Paper filing with Form 1096 is still allowed if filing fewer than 10 total information returns.
 
 ## Penalties for late or incorrect filing
 
-| When you file | Penalty per form |
-|---|---|
-| Within 30 days of deadline (by March 2) | **$60** |
-| By August 1 | **$130** |
-| After August 1 or not at all | **$330** |
-| **Intentional disregard** (you knew and didn't file) | **$660** per form, **no maximum cap** |
+Penalty amounts are indexed annually. Read the current per-form amounts from the constants table in [jurisdictions/us.md](../../jurisdictions/us.md). The structure is:
 
-**Annual maximums (for small businesses with gross receipts ≤$5 million):** $232,500 for the 30-day tier, $664,500 for the August tier, $1,328,500 for the "after August" tier. Intentional disregard has no maximum.
+| When you file | Penalty tier |
+|---|---|
+| Within 30 days of the deadline | lowest tier |
+| 31 days late through 1 August | middle tier |
+| After 1 August, or not filed at all | highest tier |
+| **Intentional disregard** (you knew and didn't file) | roughly double the highest tier, **no maximum cap** |
+
+Annual maximums also apply for small businesses and are indexed too. Intentional disregard has no maximum.
 
 These penalties apply **per form** — if you have 20 contractors and miss all of them, multiply accordingly. The penalties also apply to incorrect forms (wrong TIN, wrong amount, wrong name).
 
@@ -134,3 +146,19 @@ By January 31:
 After filing:
 - [ ] Monitor for any IRS notices about mismatches
 - [ ] File corrections promptly if errors are discovered
+
+## Agent metadata
+
+```yaml
+skill: contractor-1099
+version: 3.1
+input: contractor payment records, W-9 status, payment dates and methods
+output: 1099-NEC exposure summary + W-9 gap list + filing checklist
+jurisdiction: us
+automation_boundary: draft-and-flag
+approval_required_for:
+  - applying a treatment to a specific transaction
+  - filing or finalising a position
+next_steps:
+  - tax-prep
+```

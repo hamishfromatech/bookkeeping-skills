@@ -1,9 +1,15 @@
 ---
 name: schedule-c-categories
 title: Schedule C expense categories
-description: IRS Schedule C (Form 1040) expense category reference — every line from 8 to 27a with what belongs, what doesn't, and common mistakes. Covers COGS (Part III), operating expenses (Part II), and Form 8829 business use of home. Trigger on "what Schedule C line", "which expense category", "where does this go on Schedule C", "is this deductible".
+description: IRS Schedule C (Form 1040) expense category reference — every line from 8 to 27a with what belongs, what doesn't, and common mistakes. Covers COGS (Part III), operating expenses (Part II), and Form 8829 business use of home. Year-specific limits live in the US jurisdiction pack. Trigger on "what Schedule C line", "which expense category", "where does this go on Schedule C", "is this deductible".
+license: MIT
+compatibility: Designed for skills-compatible agents with access to categorized transactions and the US jurisdiction pack.
+metadata:
+  version: "3.1"
+  execution-mode: semi-automated
+allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - tax
   - categories
@@ -32,7 +38,7 @@ Do NOT put SaaS tools, office supplies, or general business expenses here. COGS 
 
 ### Line 9 — Car and truck expenses
 
-**Belongs here:** Gas, oil changes, tires, insurance, registration, lease payments — OR — the standard mileage rate (67¢/mile for 2024, check IRS annually). You pick one method per vehicle.
+**Belongs here:** Gas, oil changes, tires, insurance, registration, lease payments — OR — the standard mileage rate (read the current rate from [jurisdictions/us.md](../../jurisdictions/us.md)). You pick one method per vehicle.
 
 **Method lock-in:** If you use actual expenses in year 1 of a vehicle, you generally can't switch to standard mileage for that vehicle later. If you start with standard mileage, you can switch to actual (but depreciation becomes limited to straight-line). Best practice: start new vehicles on standard mileage to preserve flexibility.
 
@@ -50,7 +56,7 @@ See the vehicle-expenses skill for detailed rules on mileage tracking and method
 
 **Belongs here:** Payments to independent contractors, freelancers, consultants, subcontractors. This includes agencies if they're not incorporated.
 
-**Critical rule:** Track per-contractor totals throughout the year. Any contractor paid ≥$600 in a calendar year requires a 1099-NEC filing. Starting 2026, this threshold increases to $2,000. See the contractor-1099 skill for filing rules, deadlines, and penalties.
+**Critical rule:** Track per-contractor totals throughout the year. Contractors paid at or above the reporting threshold require a 1099-NEC. The threshold was $600 for years through 2025 and rose in 2026 — read the current figure from [jurisdictions/us.md](../../jurisdictions/us.md). See the contractor-1099 skill for filing rules, deadlines, and penalties.
 
 **Does NOT belong here:** Payments to employees (→ Line 26 Wages). Payments to C-Corps or S-Corps (generally no 1099 required — exceptions: legal services and medical/health care services always get a 1099 regardless of entity type).
 
@@ -193,3 +199,19 @@ Not on Schedule C directly — the deduction flows from Form 8829 to Schedule C 
 ## Non-US note
 
 This is US-specific. UK uses Self Assessment categories, Canada uses T2125, EU businesses track VAT input/output, Australia uses BAS categories. The expense-categorization skill covers non-US frameworks.
+
+## Agent metadata
+
+```yaml
+skill: schedule-c-categories
+version: 3.1
+input: an expense description or a categorization question
+output: Schedule C line mapping + what-does-not-belong notes
+jurisdiction: us
+automation_boundary: draft-and-flag
+approval_required_for:
+  - applying a treatment to a specific transaction
+  - filing or finalising a position
+next_steps:
+  - expense-categorization
+```

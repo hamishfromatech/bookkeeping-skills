@@ -1,0 +1,518 @@
+"""bookkeeping-mcp — a calculation companion for the bookkeeping-skills pack.
+
+The server has three jobs:
+
+1. **Stop the guesswork on current-law figures.** ``get_constants`` reads the
+   ``Current-law constants`` table out of the repository's jurisdiction packs,
+   so a figure is never recalled from a model's memory.
+2. **Do money arithmetic exactly.** Every calculation is Decimal-based and
+   quantized once, with no float drift and no silent rounding.
+3. **Give the agent a calculator.** ``calculate`` for safe arithmetic,
+   ``run_python`` for anything else, sandboxed with a timeout.
+
+Run it over stdio (the default) for Claude Code, Codex, Cursor or any MCP host:
+
+    bookkeeping-mcp
+    python3 -m bookkeeping_mcp
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+from typing import Annotated, Any
+
+from fastmcp import FastMCP
+from pydantic import Field
+
+from . import calc
+from .constants import (
+    RepositoryError,
+    find_repo_root,
+    get_jurisdiction,
+    load_jurisdictions,
+    search_constants,
+)
+from .models import (
+    AgingResult,
+    AllocationResult,
+    ConstantsResult,
+    ConstantRow,
+    EvaluationResult,
+    ExecutionResult,
+    JurisdictionList,
+    JurisdictionSummary,
+    LineCheckResult,
+    ReconciliationResult,
+    SalesTaxResult,
+    SelfEmploymentTaxResult,
+)
+from .runner import evaluate_expression, run_python as exec_python
+from .money import MoneyError
+
+INSTRUCTIONS = """\
+You are connected to the bookkeeping-skills calculation server.
+
+Rules for using it:
+
+1. Before quoting any tax rate, threshold, limit, penalty or mileage figure,
+   call `get_constants` for the user's jurisdiction. Never state one from
+   memory. If the pack reports `stale: true`, say so and treat every figure as
+   unverified.
+2. Do arithmetic for money with the tools here, not mentally and not with
+   floats. Use `sales_tax`, `percent_calculation`, `allocate_amount`,
+   `verify_line_items`, `mileage_deduction`, the home-office tools, the
+   depreciation tools, `self_employment_tax` and `reconciliation_check` where
+   they apply; use `calculate` for anything else.
+3. Use `run_python` only when a calculation genuinely needs a loop or data
+   manipulation. It runs locally with a timeout and no network guarantees.
+4. These tools compute. They do not decide tax treatment, and they never post
+   to an accounting system. A result is a draft for review, not a filing
+   position.
+5. State the tax year you used in your answer.
+"""
+
+JurisdictionCode = Annotated[
+    str,
+    Field(description="Jurisdiction pack code: 'us' or 'au' (aliases: usa, united states, australia)"),
+]
+
+Amount = Annotated[float, Field(description="Monetary amount. Strings like '1,234.56' are also accepted.")]
+RatePercent = Annotated[float, Field(description="A percentage, not a fraction: 10 means 10%, 8.875 means 8.875%")]
+
+
+def _repo_error(exc: RepositoryError) -> ValueError:
+    return ValueError(str(exc))
+
+
+def build_server(root: Path | None = None) -> FastMCP:
+    """Build the server. ``root`` overrides jurisdiction-pack discovery."""
+    repo_root = root or find_repo_root()
+
+    mcp = FastMCP(
+        name="bookkeeping-calc",
+        instructions=INSTRUCTIONS,
+    )
+
+    # ----------------------------------------------------------------- resources
+
+    @mcp.resource("bookkeeping://jurisdictions")
+    def jurisdictions_resource() -> dict:
+        """Available jurisdiction packs, their review dates, and staleness."""
+        try:
+            packs = load_jurisdictions(repo_root)
+        except RepositoryError as exc:
+            raise _repo_error(exc) from exc
+        return {
+            "repo_root": str(repo_root),
+            "jurisdictions": [pack.to_summary() for pack in packs.values()],
+        }
+
+    @mcp.resource("jurisdiction://{code}")
+    def jurisdiction_resource(code: str) -> str:
+        """The raw markdown of a jurisdiction pack."""
+        try:
+            return get_jurisdiction(code, repo_root).path.read_text(encoding="utf-8")
+        except RepositoryError as exc:
+            raise _repo_error(exc) from exc
+
+    @mcp.resource("skill://{name}")
+    def skill_resource(name: str) -> str:
+        """The raw markdown of a skill's SKILL.md."""
+        candidate = repo_root / "skills" / name / "SKILL.md"
+        if not candidate.is_file():
+            root_skill = repo_root / "SKILL.md"
+            if name.lower() in {"root", "bookkeeping"} and root_skill.is_file():
+                return root_skill.read_text(encoding="utf-8")
+            available = sorted(p.name for p in (repo_root / "skills").glob("*/SKILL.md"))
+            raise ValueError(
+                f"Unknown skill {name!r}. Available: {', '.join(p.split('/')[0] for p in available)}"
+            )
+        return candidate.read_text(encoding="utf-8")
+
+    # --------------------------------------------------------------- constants
+
+    @mcp.tool()
+    def list_jurisdictions() -> JurisdictionList:
+        """List the jurisdiction packs available in the skills repository.
+
+        Call this first when you do not know which packs exist.
+        """
+        try:
+            packs = load_jurisdictions(repo_root)
+        except RepositoryError as exc:
+            raise _repo_error(exc) from exc
+        return JurisdictionList(
+            repo_root=str(repo_root),
+            jurisdictions=[JurisdictionSummary(**pack.to_summary()) for pack in packs.values()],
+        )
+
+    @mcp.tool()
+    def get_constants(
+        jurisdiction: JurisdictionCode,
+        query: Annotated[
+            str | None,
+            Field(description="Optional filter on topic, e.g. 'mileage', 'section 179', '1099 penalty'"),
+        ] = None,
+    ) -> ConstantsResult:
+        """Read current-law figures from a jurisdiction pack.
+
+        This is the only acceptable source for mileage rates, Section 179 and
+        bonus limits, 1099 thresholds and penalties, self-employment tax
+        parameters and standard deductions. Returns the value as written, the
+        numbers extracted from it, the source URL and the date it was verified.
+        """
+        try:
+            pack = get_jurisdiction(jurisdiction, repo_root)
+        except RepositoryError as exc:
+            raise _repo_error(exc) from exc
+
+        rows = search_constants(pack, query)
+        warning = None
+        if pack.is_stale():
+            warning = (
+                f"This pack was last reviewed on "
+                f"{pack.last_reviewed.isoformat() if pack.last_reviewed else 'an unknown date'}, "
+                "more than 12 months ago. Treat every figure as unverified and tell the user."
+            )
+        if not rows:
+            warning = (
+                (warning + " ") if warning else ""
+            ) + "No constant matched the query; see available_topics."
+
+        return ConstantsResult(
+            jurisdiction=pack.code,
+            name=pack.name,
+            last_reviewed=pack.last_reviewed.isoformat() if pack.last_reviewed else None,
+            age_days=pack.age_days(),
+            stale=pack.is_stale(),
+            query=query,
+            matched=len(rows),
+            rows=[ConstantRow(**row.to_dict()) for row in rows],
+            warning=warning,
+            available_topics=sorted({row.topic for row in pack.rows}),
+        )
+
+    # ------------------------------------------------------------------- maths
+
+    @mcp.tool()
+    def sum_amounts(
+        amounts: Annotated[list[float], Field(description="Amounts to add")],
+    ) -> dict:
+        """Add a list of amounts exactly, then round once."""
+        return calc.sum_amounts(amounts)
+
+    @mcp.tool()
+    def round_amount(
+        amount: Amount,
+        places: Annotated[int, Field(description="Decimal places, 0-8")] = 2,
+        mode: Annotated[
+            str,
+            Field(description="half_up (default), half_even, down, up, floor, ceiling"),
+        ] = "half_up",
+    ) -> dict:
+        """Round an amount and report the exact adjustment made."""
+        return calc.round_amount(amount, places, mode)
+
+    @mcp.tool()
+    def percent_calculation(
+        amount: Amount,
+        rate_percent: RatePercent,
+        operation: Annotated[
+            str,
+            Field(description="of | add | subtract | reverse (reverse turns a gross into a net)"),
+        ] = "of",
+    ) -> dict:
+        """Apply a percentage: find the portion, add it, subtract it, or reverse it."""
+        return calc.percent_calculation(amount, rate_percent, operation)
+
+    @mcp.tool()
+    def margin_and_markup(cost: Amount, price: Amount) -> dict:
+        """Gross profit, gross margin % and markup % — and why they differ."""
+        return calc.margin_and_markup(cost, price)
+
+    @mcp.tool()
+    def sales_tax(
+        amount: Amount,
+        rate_percent: RatePercent,
+        inclusive: Annotated[
+            bool,
+            Field(description="True if 'amount' already includes tax (GST/VAT-inclusive); False if tax is added on top"),
+        ] = False,
+    ) -> SalesTaxResult:
+        """Split an amount into net, tax and gross for any sales tax, GST or VAT rate."""
+        return SalesTaxResult(**calc.sales_tax(amount, rate_percent, inclusive))
+
+    @mcp.tool()
+    def allocate_amount(
+        total: Amount,
+        weights: Annotated[list[float], Field(description="Relative weights, e.g. line-item amounts or [60, 40]")],
+    ) -> AllocationResult:
+        """Split a total across weights so the parts sum exactly — no lost cents.
+
+        Use this for splitting a mixed receipt across categories, or a payout
+        across invoices.
+        """
+        return AllocationResult(**calc.allocate_amount(total, weights))
+
+    @mcp.tool()
+    def verify_line_items(
+        total: Amount,
+        line_items: Annotated[
+            list[Any],
+            Field(description="Numbers, or objects like {\"amount\": 12.5, \"category\": \"Office\"}"),
+        ],
+        tolerance: Annotated[float, Field(description="Allowed difference, default 0.02")] = 0.02,
+    ) -> LineCheckResult:
+        """Check that lines reconcile to a stated total, with per-category totals.
+
+        Reports the difference and explains common causes (transposition,
+        duplicates, sign errors). It never adjusts anything.
+        """
+        return LineCheckResult(**calc.verify_line_items(total, line_items, tolerance))
+
+    # ------------------------------------------------------------------ domain
+
+    @mcp.tool()
+    def mileage_deduction(
+        segments: Annotated[
+            list[dict[str, Any]],
+            Field(
+                description=(
+                    "Rate periods: [{\"label\": \"Jan-Jun\", \"miles\": 4000, \"rate_per_mile\": 0.725}]. "
+                    "Read rate_per_mile from get_constants — do not recall it."
+                )
+            ),
+        ],
+    ) -> dict:
+        """Compute a standard-mileage deduction across one or more rate periods."""
+        return calc.mileage_deduction(segments)
+
+    @mcp.tool()
+    def home_office_simplified(
+        office_sqft: Annotated[float, Field(description="Area used regularly and exclusively for business, in square feet")],
+        rate_per_sqft: Annotated[float, Field(description="Per-square-foot rate from get_constants (US: 5.00)")] = 5.0,
+        max_sqft: Annotated[float, Field(description="Statutory area cap (US: 300)")] = 300.0,
+    ) -> dict:
+        """Simplified home-office deduction, with the area cap applied."""
+        return calc.home_office_simplified(office_sqft, rate_per_sqft, max_sqft)
+
+    @mcp.tool()
+    def home_office_actual(
+        office_sqft: Annotated[float, Field(description="Business-use area in square feet")],
+        home_sqft: Annotated[float, Field(description="Total home area in square feet")],
+        expenses: Annotated[
+            dict[str, Any],
+            Field(
+                description=(
+                    'Expenses split by behaviour: {"direct": {"office paint": 400}, '
+                    '"indirect": {"rent": 28800, "utilities": 1800, "home depreciation": 855}}'
+                )
+            ),
+        ],
+    ) -> dict:
+        """Actual-expense home-office deduction: direct at 100%, indirect at business-use %."""
+        return calc.home_office_actual(office_sqft, home_sqft, expenses)
+
+    @mcp.tool()
+    def straight_line_depreciation(
+        cost: Amount,
+        salvage: Amount,
+        life_years: Annotated[float, Field(description="Useful life or recovery period in years")],
+        business_use_percent: Annotated[float, Field(description="Business-use percentage, e.g. 100 or 75")] = 100.0,
+    ) -> dict:
+        """Straight-line depreciation, annual and monthly, at the business-use %."""
+        return calc.straight_line(cost, salvage, life_years, business_use_percent)
+
+    @mcp.tool()
+    def declining_balance_depreciation(
+        cost: Amount,
+        salvage: Amount,
+        life_years: Annotated[int, Field(description="Recovery period in whole years")],
+        rate_percent: Annotated[float, Field(description="Declining-balance rate, e.g. 200 for 200% declining balance")],
+        year: Annotated[int, Field(description="Which year of the asset's life to report")],
+        business_use_percent: Annotated[float, Field(description="Business-use percentage")] = 100.0,
+    ) -> dict:
+        """Declining-balance depreciation for one year, plus the schedule to date."""
+        return calc.declining_balance(cost, salvage, life_years, rate_percent, year, business_use_percent)
+
+    @mcp.tool()
+    def first_year_asset_expense(
+        cost: Amount,
+        business_use_percent: Annotated[float, Field(description="Business-use percentage")] = 100.0,
+        bonus_rate_percent: Annotated[
+            float, Field(description="Bonus depreciation percentage for the year, from get_constants")
+        ] = 0.0,
+        section_179_available: Annotated[
+            float | None,
+            Field(description="How much Section 179 capacity to apply. Omit for business basis."),
+        ] = None,
+    ) -> dict:
+        """First-year asset expense in the correct order: business use %, Section 179, bonus, remainder."""
+        return calc.first_year_expense(cost, business_use_percent, bonus_rate_percent, section_179_available)
+
+    @mcp.tool()
+    def self_employment_tax(
+        net_profit: Amount,
+        ss_wage_base: Annotated[
+            float | None,
+            Field(description="Social Security wage base. Omit to read it from the US jurisdiction pack."),
+        ] = None,
+        other_wages: Annotated[float, Field(description="W-2 wages already counted against the wage base")] = 0.0,
+        additional_medicare_threshold: Annotated[
+            float, Field(description="US: 200000 single, 250000 married filing jointly")
+        ] = 200000.0,
+    ) -> SelfEmploymentTaxResult:
+        """US self-employment tax: 92.35% base, 12.4% Social Security cap, 2.9% Medicare, 0.9% surtax."""
+        if ss_wage_base is None:
+            try:
+                pack = get_jurisdiction("us", repo_root)
+            except RepositoryError as exc:
+                raise _repo_error(exc) from exc
+            for row in pack.rows:
+                if "social security wage base" in row.topic.lower():
+                    numbers = row.numbers
+                    if numbers:
+                        ss_wage_base = numbers[0]
+                        break
+            if ss_wage_base is None:
+                raise ValueError(
+                    "Could not read the Social Security wage base from the US pack. "
+                    "Pass ss_wage_base explicitly."
+                )
+        return SelfEmploymentTaxResult(
+            **calc.self_employment_tax(
+                net_profit, ss_wage_base, other_wages, additional_medicare_threshold
+            )
+        )
+
+    @mcp.tool()
+    def estimated_tax_safe_harbor(
+        prior_year_tax: Amount,
+        prior_agi: Amount = 0.0,
+        current_year_tax_estimate: Annotated[
+            float | None, Field(description="Optional current-year tax estimate to test the 90% route")
+        ] = None,
+        quarters_remaining: Annotated[int, Field(description="Quarters left in the year, 1-4")] = 4,
+    ) -> dict:
+        """Prior-year 100%/110% safe harbour and, optionally, the current-year 90% route."""
+        return calc.estimated_tax_safe_harbor(
+            prior_year_tax, prior_agi, current_year_tax_estimate, quarters_remaining
+        )
+
+    @mcp.tool()
+    def reconciliation_check(
+        bank_ending: Amount,
+        book_ending: Amount,
+        deposits_in_transit: Amount = 0.0,
+        outstanding_payments: Amount = 0.0,
+        book_additions: Amount = 0.0,
+        book_subtractions: Amount = 0.0,
+        candidate_items: Annotated[
+            list[float] | None,
+            Field(description="Optional transaction amounts to test against the difference"),
+        ] = None,
+    ) -> ReconciliationResult:
+        """Adjusted bank versus adjusted book balance, and why they differ."""
+        return ReconciliationResult(
+            **calc.reconciliation_check(
+                bank_ending,
+                book_ending,
+                deposits_in_transit,
+                outstanding_payments,
+                book_additions,
+                book_subtractions,
+                candidate_items,
+            )
+        )
+
+    @mcp.tool()
+    def ar_aging(
+        records: Annotated[
+            list[dict[str, Any]],
+            Field(
+                description=(
+                    "Invoice records: {status, total_amount, amount_paid?, due_date?, currency?}. "
+                    "Statuses: paid, open, partially-paid, overdue, credited, draft, void."
+                )
+            ),
+        ],
+        as_of: Annotated[
+            str | None, Field(description="Aging reference date YYYY-MM-DD; defaults to today")
+        ] = None,
+    ) -> AgingResult:
+        """Receivables aging buckets from invoice records."""
+        return AgingResult(**calc.ar_aging(records, as_of))
+
+    # ------------------------------------------------------------ calculation
+
+    @mcp.tool()
+    def calculate(
+        expression: Annotated[
+            str,
+            Field(
+                description=(
+                    "Arithmetic only: + - * / // % **, parentheses, and abs/min/max/sum/round/sqrt/log/exp. "
+                    "Example: '(1234.56 - 200) * 0.7'"
+                )
+            ),
+        ],
+    ) -> EvaluationResult:
+        """Evaluate an arithmetic expression exactly, using Decimal, with no side effects."""
+        return EvaluationResult(**evaluate_expression(expression))
+
+    @mcp.tool()
+    def run_python(
+        code: Annotated[str, Field(description="Python source. A trailing bare expression is echoed.")],
+        timeout_seconds: Annotated[float, Field(description="Wall-clock limit, 0.1 to 30")] = 10.0,
+    ) -> ExecutionResult:
+        """Run Python in an isolated child process and return stdout/stderr.
+
+        Use for loops, CSV/JSON reshaping and anything `calculate` cannot do.
+        The process gets a scratch working directory, a minimal environment, and
+        CPU/memory/file-size limits. There is no network isolation, so do not
+        treat this as a security boundary against hostile code.
+        """
+        return ExecutionResult(**exec_python(code, timeout_seconds))
+
+    return mcp
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="bookkeeping-mcp",
+        description="Calculation, jurisdiction constants and sandboxed Python for bookkeeping skills.",
+    )
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "http", "sse"),
+        default="stdio",
+        help="stdio for local MCP hosts (default); http/sse for a long-running server",
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="Host for http/sse transports")
+    parser.add_argument("--port", type=int, default=8765, help="Port for http/sse transports")
+    parser.add_argument(
+        "--root",
+        default=None,
+        help="Path to the bookkeeping-skills repo root (defaults to auto-discovery)",
+    )
+    args = parser.parse_args(argv)
+
+    root = Path(args.root).expanduser() if args.root else None
+
+    try:
+        mcp = build_server(root)
+    except RepositoryError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    if args.transport == "stdio":
+        mcp.run()
+    else:
+        mcp.run(transport=args.transport, host=args.host, port=args.port)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

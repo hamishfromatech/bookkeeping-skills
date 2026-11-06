@@ -1,0 +1,80 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  skills:
+    name: skills and jurisdictions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Validate frontmatter, links, figures and skill map
+        run: python scripts/validate_skills.py
+
+      - name: Test the bundled summary scripts
+        run: python -m pytest tests/ -q
+
+  mcp-server:
+    name: mcp-server (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the server with dev extras
+        run: python -m pip install --disable-pip-version-check -e "./mcp-server[dev]"
+
+      - name: Test
+        run: python -m pytest mcp-server/tests -q
+
+      - name: Smoke test the stdio entry point
+        run: |
+          python -m bookkeeping_mcp --help
+          python - <<'PY'
+          import asyncio, json, sys
+          from fastmcp import Client
+          from fastmcp.client.transports import StdioTransport
+
+          async def main() -> None:
+              transport = StdioTransport(
+                  command=sys.executable,
+                  args=["-m", "bookkeeping_mcp", "--transport", "stdio"],
+              )
+              async with Client(transport) as client:
+                  tools = await client.list_tools()
+                  assert len(tools) >= 20, len(tools)
+                  raw = await client.call_tool(
+                      "get_constants", {"jurisdiction": "us", "query": "mileage"}
+                  )
+                  payload = json.loads(raw[0].text)
+                  assert payload["matched"] >= 1, payload
+                  print(f"stdio ok: {len(tools)} tools")
+
+          asyncio.run(main())
+          PY

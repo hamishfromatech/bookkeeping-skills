@@ -1,0 +1,28 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# test / tooling artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+.cache/
+
+# environments
+.venv/
+venv/
+env/
+
+# packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# local scratch
+*.local.json
+.tmp/

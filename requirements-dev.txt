@@ -1,0 +1,11 @@
+# Development dependencies for the skills repository itself.
+#
+# The skills have no runtime dependencies — they are markdown plus a handful of
+# standard-library-only Python helpers. These packages are only needed to run
+# the validator and the tests.
+#
+# The companion MCP server has its own dependencies; install those with:
+#     pip install -e "./mcp-server[dev]"
+
+pytest>=8
+pyyaml>=6

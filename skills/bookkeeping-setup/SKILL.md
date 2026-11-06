@@ -5,12 +5,12 @@ description: Create a bookkeeping context profile before downstream bookkeeping 
 license: MIT
 compatibility: Designed for skills-compatible agents with access to accounting-system settings, spreadsheets, files, or user-provided business context.
 metadata:
-  version: "3.0"
+  version: "3.1"
   execution-mode: semi-automated
   artifact-types: context-profile,setup-checklist,account-map
 allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-06-02
-updatedDate: 2026-06-02
+updatedDate: 2026-11-06
 tags:
   - setup
   - context
@@ -89,7 +89,10 @@ If entity type is unknown, keep it as `unknown` and route entity-specific tax tr
 
 ### 3. Choose the accounting basis
 
-Capture the accounting method:
+Capture **two** things that are easy to conflate:
+
+1. **Tax accounting method** — cash, accrual, or hybrid. Drives when income and expenses are recognised.
+2. **Sales-tax / GST accounting basis** — cash or accrual/non-cash. Drives when tax is reported on a return or BAS. These can differ from the tax method; record them separately.
 
 | Situation | Likely method | Notes |
 |---|---|---|
@@ -100,9 +103,11 @@ Capture the accounting method:
 
 Use the accounting method to shape downstream work:
 
-- Cash basis: record most income and expenses when money changes hands.
-- Accrual basis: track receivables, payables, accruals, prepaids, deferred revenue, and adjusting entries.
+- Cash basis: record most income and expenses when money changes hands. An unpaid invoice is a receivable, not revenue.
+- Accrual basis: track receivables, payables, accruals, prepaids, deferred revenue, and adjusting entries. An issued invoice is revenue.
 - Unknown: draft records, but flag method-sensitive decisions.
+
+If the business is registered for GST/VAT, also capture the reporting basis and cycle (for example quarterly BAS in Australia).
 
 ### 4. Define a starter chart of accounts
 
@@ -174,12 +179,13 @@ Use this handoff:
 
 | If the user wants... | Next skill |
 |---|---|
-| Capture receipts or invoices | `receipt-processing` |
+| Capture sales, invoices, or receivables | `income-invoicing` |
+| Capture receipts or vendor bills | `receipt-processing` |
 | Categorize transactions | `expense-categorization` |
 | Match books to statements | `bank-reconciliation` |
 | Close a month | `monthly-close` |
 | Prepare accountant or tax package | `tax-prep` |
-| Ask whether a deduction is allowed | Specialized tax skill |
+| Ask whether a deduction is allowed | Specialized tax skill (US) or the jurisdiction pack |
 
 ## Setup checklist
 
@@ -202,7 +208,7 @@ Recommended next skill:
 
 ```yaml
 skill: bookkeeping-setup
-version: 3.0
+version: 3.1
 default_output: bookkeeping_context_profile + setup_checklist
 automation_boundary: draft-context-and-account-map
 approval_required_for:
@@ -211,6 +217,7 @@ approval_required_for:
   - creating or merging live accounts
   - filing or finalizing compliance work
 next_steps:
+  - income-invoicing
   - receipt-processing
   - expense-categorization
   - bank-reconciliation

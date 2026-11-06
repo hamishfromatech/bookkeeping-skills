@@ -5,11 +5,11 @@ description: Organize financial records into tax-ready reports — P&L mapped to
 license: MIT
 compatibility: Designed for skills-compatible agents with network access and access to categorized books, reconciliations, and exportable reports.
 metadata:
-  version: "3.0"
+  version: "3.1"
   execution-mode: semi-automated
 allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - tax
   - reporting
@@ -119,9 +119,9 @@ These categories require attention beyond basic categorization:
 
 **Depreciation** — Assets >$2,500 need Section 179, bonus, or MACRS treatment. See **depreciation-assets** skill.
 
-**1099 contractors** — Anyone paid ≥$600 (≥$2,000 starting 2026) needs a 1099-NEC by Jan 31. See **contractor-1099** skill for the full filing process.
+**1099 contractors** — Anyone paid at or above the reporting threshold needs a 1099-NEC by 31 January. The threshold changed in 2026 — read it from [jurisdictions/us.md](../../jurisdictions/us.md). See **contractor-1099** skill for the full filing process.
 
-**Self-employment tax** — Net profit × 92.35% × 15.3%. Social Security caps at $168,600 (2024). Half is deductible on Form 1040 Line 15. See **estimated-taxes** skill for the calculation.
+**Self-employment tax** — Net profit × 92.35% × 15.3%, with the Social Security portion capped at the annual wage base and a 0.9% additional Medicare tax above the threshold. Both figures live in [jurisdictions/us.md](../../jurisdictions/us.md). Half of the SE tax is an above-the-line Form 1040 deduction. See **estimated-taxes** skill for the calculation.
 
 **Startup costs (first year only)** — Up to $5,000 deductible immediately (reduced dollar-for-dollar above $50,000 total). Remainder amortized over 180 months. Organizational costs have a separate $5,000 deduction.
 
@@ -175,7 +175,7 @@ Export as spreadsheet (preferred by accountants), PDF (archive), or accounting s
 
 ```yaml
 skill: tax-prep
-version: 3.0
+version: 3.1
 input: categorized and reconciled financial records
 output: tax-ready reports (P&L, expense summary, 1099 summary, depreciation schedule, flagged items)
 dependencies:

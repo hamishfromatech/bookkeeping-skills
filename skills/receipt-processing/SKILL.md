@@ -5,12 +5,12 @@ description: Extract structured data from receipts and invoices for bookkeeping,
 license: MIT
 compatibility: Designed for skills-compatible agents with network access and either browser, email/inbox, filesystem, or API connectors.
 metadata:
-  version: "3.0"
+  version: "3.1"
   execution-mode: semi-automated
   artifact-types: table,csv,json,draft-ledger
 allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - receipts
   - automation
@@ -156,7 +156,7 @@ After extraction:
 
 ```yaml
 skill: receipt-processing
-version: 3.0
+version: 3.1
 default_output: review-table + json-or-csv
 automation_boundary: extract-and-draft
 approval_required_for:

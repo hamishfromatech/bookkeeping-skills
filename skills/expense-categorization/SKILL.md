@@ -5,11 +5,11 @@ description: Assign transactions to tax-aligned expense categories using vendor 
 license: MIT
 compatibility: Designed for skills-compatible agents with network access and access to receipt data, spreadsheets, or accounting exports.
 metadata:
-  version: "3.0"
+  version: "3.1"
   execution-mode: semi-automated
 allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - expenses
   - categories
@@ -159,7 +159,7 @@ Potential personal expenses flagged: 3
 
 ```yaml
 skill: expense-categorization
-version: 3.0
+version: 3.1
 input: transaction list (from receipt-processing or bank statement)
 output: categorized transaction table with Schedule C line mapping
 dependencies:

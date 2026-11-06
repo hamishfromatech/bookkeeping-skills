@@ -1,9 +1,15 @@
 ---
 name: depreciation-assets
 title: Depreciation and asset tracking
-description: Determine whether to expense or depreciate business assets using the de minimis safe harbor ($2,500), Section 179 ($1,220,000 limit), bonus depreciation (phase-out 2024–2027), or MACRS schedules. Track asset basis, useful life, and accumulated depreciation. Trigger on "depreciate", "Section 179", "bonus depreciation", "capitalize or expense", "asset tracking", "de minimis".
+description: Determine whether to expense or depreciate business assets using the de minimis safe harbor, Section 179, 100% bonus depreciation, or MACRS schedules. Track asset basis, useful life, and accumulated depreciation. Year-specific limits live in the US jurisdiction pack. Trigger on "depreciate", "Section 179", "bonus depreciation", "capitalize or expense", "asset tracking", "de minimis".
+license: MIT
+compatibility: Designed for skills-compatible agents with access to asset purchases, invoices, and the US jurisdiction pack.
+metadata:
+  version: "3.1"
+  execution-mode: semi-automated
+allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - tax
   - depreciation
@@ -53,10 +59,9 @@ Items costing **$2,500 or less** per invoice (or per item if the invoice lists i
 
 Allows you to deduct the **full cost** of qualifying assets in the year they're placed in service, regardless of useful life.
 
-**2024 limits (adjust annually for inflation):**
-- Maximum deduction: **$1,220,000**
-- Phase-out begins at: **$3,050,000** total asset purchases for the year
-- Phase-out is dollar-for-dollar: if you buy $3,200,000 in assets, your Section 179 limit drops to $1,070,000
+**Limits: read them from the constants table in [jurisdictions/us.md](../../jurisdictions/us.md).** Both the maximum deduction and the phase-out threshold are indexed annually. The OBBBA increased the limit substantially from 2025, so any figure quoted from memory before mid-2025 is wrong.
+
+The phase-out is dollar-for-dollar: once total qualifying purchases exceed the phase-out threshold, the deduction limit falls by the same amount. Compute the current year's effective cap from the two figures in the jurisdiction pack — do not reuse last year's worked example.
 
 **What qualifies:**
 - Tangible personal property: computers, machinery, equipment, furniture, vehicles (with limitations)
@@ -73,9 +78,9 @@ Allows you to deduct the **full cost** of qualifying assets in the year they're 
 - Air conditioning or heating units (unless part of a building improvement)
 
 **Vehicle limitations (Section 179):**
-- SUVs over 6,000 lbs GVWR: Section 179 limited to **$28,900** (2024). The rest must use bonus depreciation or regular MACRS.
+- SUVs over 6,000 lbs GVWR: Section 179 is capped at a separate, much lower annual figure for SUVs. Read it from the jurisdiction pack.
 - Passenger automobiles: subject to annual luxury auto limits (see vehicle-expenses skill)
-- Heavy vehicles over 6,000 lbs GVWR that are NOT SUVs (trucks, vans): no special Section 179 limit — full deduction allowed
+- Heavy vehicles over 6,000 lbs GVWR that are NOT SUVs (trucks, vans): no special Section 179 limit — full deduction allowed up to the general cap
 
 **Key advantage:** You choose exactly how much to expense under Section 179 (up to the limit). This gives you control over your taxable income.
 
@@ -85,15 +90,9 @@ Allows you to deduct the **full cost** of qualifying assets in the year they're 
 
 Allows a **percentage** of the asset's cost to be deducted in the first year, with the remainder depreciated normally.
 
-**Phase-out schedule:**
-| Year placed in service | Bonus depreciation % |
-|---|---|
-| 2022 and earlier | 100% |
-| 2023 | 80% |
-| 2024 | 60% |
-| 2025 | 40% |
-| 2026 | 20% |
-| 2027+ | 0% |
+**Current percentage: read it from the constants table in [jurisdictions/us.md](../../jurisdictions/us.md).** The phase-down schedule written into TCJA was superseded by the OBBBA, which restored 100% bonus depreciation for qualified property. Bonus percentages have changed three times since 2022 — never quote them from memory, and never assume a phase-out is still running.
+
+The important mechanic: the percentage applies to **qualified property placed in service in that year**. Property placed in service in an earlier year keeps the percentage that applied then.
 
 **What qualifies:** Most tangible property with a MACRS recovery period of 20 years or less, computer software, qualified film/TV/live theatrical production, specified plants. Both **new and used** property qualify (since TCJA 2017 — previously only new property).
 
@@ -141,9 +140,11 @@ Maintain a register of all capitalized assets:
 | Asset | Date placed in service | Cost basis | Business use % | Method | Prior depreciation | Current year | Remaining basis |
 |-------|----------------------|-----------|---------------|--------|-------------------|-------------|----------------|
 | MacBook Pro 16" | 2024-03-15 | $3,499 | 100% | Sec 179 | $3,499 | $0 | $0 |
-| Herman Miller desk | 2024-06-01 | $2,800 | 100% | Bonus 60% | $1,680 | $160 | $960 |
+| Herman Miller desk | 2024-06-01 | $2,800 | 100% | Bonus | $1,680 | $160 | $960 |
 | Honda CR-V (business) | 2023-09-01 | $32,000 | 75% | MACRS 5yr | $7,200 | $3,840 | $12,960 |
 | Office renovation | 2024-01-15 | $18,000 | 100% | MACRS 15yr | $600 | $1,200 | $16,200 |
+
+The figures above illustrate **structure, not current law** — they are placeholder values. Compute real depreciation from the method, class life and the year-specific limit in the jurisdiction pack.
 
 Update this register annually when preparing tax returns. Your accountant needs this to complete Form 4562.
 
@@ -168,3 +169,19 @@ When you sell, trade in, donate, or discard a depreciated asset:
 **Using the wrong class life.** A computer is 5-year property, not 7-year. Office furniture is 7-year, not 5-year. Using the wrong class life changes the annual deduction amount and can trigger issues on audit.
 
 **Not tracking business-use percentage.** If business use of an asset drops below 50% in any year, you must switch from MACRS to ADS (slower depreciation) and may need to recapture previously claimed Section 179 or bonus depreciation. Track business-use percentages annually.
+
+## Agent metadata
+
+```yaml
+skill: depreciation-assets
+version: 3.1
+input: asset purchases, placed-in-service dates, business-use percentages
+output: asset register + depreciation schedule + Form 4562 inputs
+jurisdiction: us
+automation_boundary: draft-and-flag
+approval_required_for:
+  - applying a treatment to a specific transaction
+  - filing or finalising a position
+next_steps:
+  - tax-prep
+```

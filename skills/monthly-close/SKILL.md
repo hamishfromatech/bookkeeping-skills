@@ -5,11 +5,11 @@ description: Repeatable month-end close checklist for small businesses — lock 
 license: MIT
 compatibility: Designed for skills-compatible agents with network access and access to books, statements, and exported reports.
 metadata:
-  version: "3.0"
+  version: "3.1"
   execution-mode: semi-automated
 allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - close
   - reporting
@@ -128,15 +128,17 @@ For each, verify: correct category, proper documentation (receipt exists), busin
 
 ### Step 7: Check contractor totals (US)
 
-If you pay contractors, check year-to-date totals:
+If you pay contractors, check year-to-date totals against the **current** 1099-NEC reporting threshold in [jurisdictions/us.md](../../jurisdictions/us.md). The threshold changed in 2026, so use the figure that applied to the payment dates in the period being closed.
 
-| Contractor | YTD paid | 1099 threshold | Status |
+| Contractor | YTD paid | Threshold | Status |
 |---|---|---|---|
-| Jane Smith | $4,200 | $600 | Above threshold — W-9 on file? |
-| Bob Johnson | $450 | $600 | Approaching — monitor |
+| Jane Smith | $4,200 | from jurisdiction pack | Above threshold — W-9 on file? |
+| Bob Johnson | $450 | from jurisdiction pack | Below/approaching — monitor |
 | Acme Corp (S-Corp) | $12,000 | N/A | Corporation — no 1099 needed |
 
-Flag any contractor who has crossed or is approaching the 1099 threshold. Verify you have a current W-9 on file. If you don't have a W-9 and the contractor won't provide one, you're required to withhold 24% of future payments (backup withholding).
+Flag any contractor who has crossed or is approaching the threshold. Verify you have a current W-9 on file. If you don't have a W-9 and the contractor won't provide one, you're required to withhold 24% of future payments (backup withholding).
+
+**Not in the US?** Skip this step and use the jurisdiction pack instead. In Australia, contractor reporting runs through an ABN and, for certain industries, the TPAR due 28 August — see [jurisdictions/au.md](../../jurisdictions/au.md).
 
 ### Step 8: Generate the monthly financial summary
 
@@ -221,7 +223,7 @@ If you're using a consistent receipt-capture workflow and doing weekly categoriz
 
 ```yaml
 skill: monthly-close
-version: 2.0
+version: 3.1
 input: access to books, bank statements, and receipt data
 output: closed month with reconciliation reports, P&L summary, and carry-forward items
 dependencies:

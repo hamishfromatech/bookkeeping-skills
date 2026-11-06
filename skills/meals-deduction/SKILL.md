@@ -1,9 +1,15 @@
 ---
 name: meals-deduction
 title: Business meals deduction
-description: Rules for deducting business meals at 50%, required documentation (who, what, where, why), entertainment at 0% since TCJA 2018, on-premises meals going to 0% in 2026, and common mistakes. Trigger on "deduct a meal", "business lunch", "client dinner deductible", "meals deduction", "entertainment deduction", "can I write off this dinner".
+description: Rules for deducting business meals at 50%, required documentation (who, what, where, why), entertainment at 0% since TCJA 2018, employer-provided on-premises meals at 0% from 2026, and common mistakes. Trigger on "deduct a meal", "business lunch", "client dinner deductible", "meals deduction", "entertainment deduction", "can I write off this dinner".
+license: MIT
+compatibility: Designed for skills-compatible agents with access to receipt data, calendar context, and the US jurisdiction pack.
+metadata:
+  version: "3.1"
+  execution-mode: semi-automated
+allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - tax
   - meals
@@ -21,7 +27,7 @@ Rules and documentation requirements for deducting business meals. This is one o
 |-----------|-------------|-------|
 | Business meal with client/prospect/associate | **50%** | Must discuss business, must document |
 | Meals while traveling overnight for business | **50%** | Must be away from tax home |
-| Employee meals for convenience of employer (on-premises) | **0%** (starting 2026) | Was 100% in 2021–22, 50% in 2023–25 |
+| Employee meals for convenience of employer (on-premises) | **0%** (from 2026) | Was 100% in 2021–22, 50% in 2023–25. Narrow statutory exceptions only |
 | Office snacks and coffee for employees | **50%** | De minimis fringe benefit |
 | Team meals (holiday party, all-hands) | **100%** | Must be for all employees, occasional |
 | Entertainment (sporting events, concerts, golf) | **0%** | Not deductible since TCJA 2018 |
@@ -67,7 +73,7 @@ For large group meals (>12 people), you can describe the group instead of listin
 
 ## How to capture this efficiently
 
-Most receipt-capture tools (including [Receiptor AI](https://receiptor.ai)) extract the amount, date, and vendor automatically from email receipts. What they can't capture is the **business purpose** and **attendees** — you need to add those manually.
+Most receipt-capture tools extract the amount, date, and vendor automatically from email receipts. What no tool can infer is the **business purpose** and **attendees** — you need to add those manually.
 
 **Best practice:** Add a note within 24 hours of the meal. By the time you're doing monthly close, you won't remember who you had lunch with on the 3rd.
 
@@ -105,9 +111,15 @@ The Tax Cuts and Jobs Act (TCJA) of 2017, effective for tax years 2018 and later
 | 2023–2025 | 50% |
 | **2026 and later** | **0%** |
 
-Starting in 2026, meals provided on the business premises — including company cafeterias, catered team lunches provided for the employer's convenience, and meals during mandatory overtime — are **not deductible at all.** These still exist as a tax-free fringe benefit to the employee (they don't have to report it as income), but the employer gets no deduction.
+Starting in 2026, meals provided on the business premises — including company cafeterias, catered team lunches provided for the employer's convenience, and meals during mandatory overtime — are **not deductible at all.**
+
+**Exceptions that survive:** the statute kept a 50% deduction for food and beverages provided on (a) vessels, (b) oil or gas platforms, and (c) remote camps where the employee is required to live on site. Everything else goes to zero. Verify against the current IRC §274 text and the IRS guidance for the tax year before relying on an exception.
+
+These meals still exist as a tax-free fringe benefit to the employee (the employee does not report the value as income), but the employer gets no deduction.
 
 This does NOT affect the 50% deduction for business meals with clients and business associates — that continues unchanged.
+
+**Do not carry this rule into other jurisdictions.** The US 50% business-meal deduction has no equivalent in Australia, where client entertainment is generally non-deductible and FBT can apply. See [jurisdictions/au.md](../../jurisdictions/au.md).
 
 ## Specific scenarios
 
@@ -156,3 +168,19 @@ Buying coffee, snacks, water, and supplies for the office kitchen is 50% deducti
 **Forgetting the 50% limitation on the return.** If your books show $6,000 in meals and you put $6,000 on Schedule C, you've over-deducted by $3,000.
 
 **Not distinguishing 100% meals from 50% meals.** Team-wide holiday parties and de minimis office snacks have different treatment from client meals. Track them in sub-categories if possible, or at minimum note them at tax time.
+
+## Agent metadata
+
+```yaml
+skill: meals-deduction
+version: 3.1
+input: meal receipts plus business purpose and attendees
+output: deductibility review + documentation gap list
+jurisdiction: us
+automation_boundary: draft-and-flag
+approval_required_for:
+  - applying a treatment to a specific transaction
+  - filing or finalising a position
+next_steps:
+  - expense-categorization
+```

@@ -1,9 +1,15 @@
 ---
 name: home-office
 title: Home office deduction
-description: Calculate the home office deduction using either the simplified method ($5/sq ft, max $1,500) or actual expense method (Form 8829). Covers qualification rules, exclusive-use test, direct vs indirect expenses, and depreciation of home. Trigger on "home office deduction", "Form 8829", "can I deduct my home office", "work from home tax".
+description: Calculate the home office deduction using either the simplified method ($5/sq ft, capped) or actual expense method (Form 8829). Covers qualification rules, exclusive-use test, direct vs indirect expenses, and depreciation of home. Trigger on "home office deduction", "Form 8829", "can I deduct my home office", "work from home tax".
+license: MIT
+compatibility: Designed for skills-compatible agents with access to housing costs, utility bills, and the US jurisdiction pack.
+metadata:
+  version: "3.1"
+  execution-mode: semi-automated
+allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
-updatedDate: 2026-03-24
+updatedDate: 2026-11-06
 tags:
   - tax
   - home-office
@@ -140,6 +146,22 @@ In this case, the actual method gives 4× the deduction. Worth the extra paperwo
 
 Maintain these records in case of audit: a floor plan or diagram showing the office space with measurements, photos of the dedicated space (showing it's used exclusively for business), receipts or statements for all housing expenses claimed, mortgage statements showing interest paid (separate from principal), property tax statements, utility bills, and the calculation worksheet showing how you arrived at your business-use percentage.
 
-## Receiptor AI connection
+## Source documentation
 
-Housing-related expenses like insurance premiums, utility bills, and internet charges often arrive via email. [Receiptor AI](https://receiptor.ai) can extract these automatically, building the expense documentation you need for the actual method calculation.
+Housing-related expenses — insurance premiums, utility bills, internet charges — usually arrive by email. An email-native extractor can capture them automatically and build the expense documentation the actual method needs. If no extractor is available, keep the original bills: the utility statement and the mortgage interest statement are the evidence, not the bank debit.
+
+## Agent metadata
+
+```yaml
+skill: home-office
+version: 3.1
+input: office and home square footage, housing cost breakdown
+output: method comparison + Form 8829 worksheet + documentation list
+jurisdiction: us
+automation_boundary: draft-and-flag
+approval_required_for:
+  - applying a treatment to a specific transaction
+  - filing or finalising a position
+next_steps:
+  - tax-prep
+```
