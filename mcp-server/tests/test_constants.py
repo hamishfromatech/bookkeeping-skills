@@ -32,7 +32,7 @@ def test_unknown_root_raises(monkeypatch, tmp_path: Path):
 
 def test_both_packs_load(repo_root: Path):
     packs = load_jurisdictions(repo_root)
-    assert set(packs) == {"us", "au"}
+    assert set(packs) == {"us", "au", "nz"}
 
 
 def test_template_and_readme_are_skipped(repo_root: Path):
@@ -71,9 +71,32 @@ def test_au_pack_parses(repo_root: Path):
     assert "super" in topics
 
 
+def test_nz_pack_parses(repo_root: Path):
+    pack = get_jurisdiction("nz", repo_root)
+    assert pack.last_reviewed is not None
+    topics = " | ".join(row.topic for row in pack.rows).lower()
+    assert "gst" in topics
+    assert "kilometre" in topics
+    assert "provisional tax" in topics
+    assert "acc" in topics
+
+
+def test_nz_constants_carry_sources_and_numbers(repo_root: Path):
+    pack = get_jurisdiction("nz", repo_root)
+    gst = [r for r in pack.rows if r.topic.lower().startswith("gst rate")][0]
+    assert gst.numbers == [15.0]
+    assert gst.source_url and gst.source_url.startswith("http")
+    assert gst.verified == "2026-11-06"
+
+    low_value = [r for r in pack.rows if "low-value asset" in r.topic.lower()][0]
+    assert 1000.0 in low_value.numbers
+
+
 def test_alias_lookup(repo_root: Path):
     assert get_jurisdiction("Australia", repo_root).code == "au"
     assert get_jurisdiction("USA", repo_root).code == "us"
+    assert get_jurisdiction("New Zealand", repo_root).code == "nz"
+    assert get_jurisdiction("aotearoa", repo_root).code == "nz"
 
 
 def test_unknown_jurisdiction_lists_available(repo_root: Path):
@@ -128,3 +151,17 @@ def test_header_row_and_separator_are_not_rows(tmp_path: Path):
     assert len(pack.rows) == 1
     assert pack.rows[0].source_url == "https://ato.gov.au"
     assert pack.last_reviewed == date(2026, 1, 1)
+
+
+def test_search_ranks_distinctive_term_above_common_one(repo_root: Path):
+    """'rate' appears in nearly every row; 'kilometre' should dominate."""
+    pack = get_jurisdiction("nz", repo_root)
+    hits = search_constants(pack, "kilometre rate petrol")
+    assert hits
+    assert "kilometre" in hits[0].topic.lower(), hits[0].topic
+
+
+def test_search_prefers_topic_matches(repo_root: Path):
+    pack = get_jurisdiction("nz", repo_root)
+    hits = search_constants(pack, "provisional tax")
+    assert "provisional tax" in hits[0].topic.lower(), hits[0].topic

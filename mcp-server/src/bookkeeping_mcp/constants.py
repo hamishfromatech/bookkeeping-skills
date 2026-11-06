@@ -235,6 +235,9 @@ def get_jurisdiction(code: str, root: Path | None = None) -> Jurisdiction:
         "america": "us",
         "australia": "au",
         "aus": "au",
+        "new zealand": "nz",
+        "aotearoa": "nz",
+        "nzl": "nz",
     }
     key = aliases.get(key, key)
     if key not in packs:
@@ -245,15 +248,38 @@ def get_jurisdiction(code: str, root: Path | None = None) -> Jurisdiction:
 
 
 def search_constants(jurisdiction: Jurisdiction, query: str | None = None) -> list[ConstantRow]:
+    """Filter constants, best match first.
+
+    Terms are weighted by inverse document frequency so that a distinctive word
+    ("kilometre") outranks a word that appears in almost every row ("rate").
+    """
     rows = list(jurisdiction.rows)
     if not query:
         return rows
 
     terms = [t for t in re.split(r"[\s,]+", query.lower()) if t]
+    if not terms:
+        return rows
 
-    def score(row: ConstantRow) -> int:
-        haystack = f"{row.topic} {row.tax_year} {row.value}".lower()
-        return sum(1 for term in terms if term in haystack)
+    def haystack(row: ConstantRow) -> str:
+        return f"{row.topic} {row.tax_year} {row.value}".lower()
+
+    docs = max(len(rows), 1)
+    frequency = {
+        term: max(sum(1 for row in rows if term in haystack(row)), 1) for term in set(terms)
+    }
+
+    def score(row: ConstantRow) -> float:
+        text = haystack(row)
+        total = 0.0
+        for term in terms:
+            if term in text:
+                total += 1.0 / frequency[term]
+                if term in row.topic.lower():
+                    total += 0.5 / frequency[term]
+        return total
 
     scored = [(score(row), row) for row in rows]
-    return [row for s, row in scored if s > 0]
+    matched = [(s, row) for s, row in scored if s > 0]
+    matched.sort(key=lambda pair: (-pair[0], pair[1].topic))
+    return [row for _score, row in matched]

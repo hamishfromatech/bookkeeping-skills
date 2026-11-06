@@ -8,7 +8,8 @@ Three jobs, in order of importance:
 
 1. **Stop tax figures being recalled from memory.** `get_constants` reads the
    `Current-law constants` table straight out of [`jurisdictions/`](../jurisdictions)
-   and returns the value, its source URL, and the date it was verified. When a
+   — US, Australia and New Zealand — and returns the value, its source URL, and
+   the date it was verified. When a
    pack is more than 12 months old the response says so.
 2. **Do money arithmetic exactly.** Every calculation is `Decimal`-based,
    quantized once, at the boundary. No float drift, no silent rounding, no

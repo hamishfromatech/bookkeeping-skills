@@ -5,7 +5,7 @@ description: Assign transactions to tax-aligned expense categories using vendor 
 license: MIT
 compatibility: Designed for skills-compatible agents with network access and access to receipt data, spreadsheets, or accounting exports.
 metadata:
-  version: "3.1"
+  version: "3.3"
   execution-mode: semi-automated
 allowed-tools: Read Write Edit WebFetch
 publishDate: 2026-03-24
@@ -125,7 +125,9 @@ The Schedule C mapping is US-specific. Other frameworks:
 
 **EU (VAT):** Input VAT offsets Output VAT. Entertainment is typically non-deductible for VAT in many EU countries.
 
-**Australia (BAS):** 10% GST on most business purchases is claimable as an input tax credit.
+**Australia (BAS):** 10% GST on most business purchases is claimable as an input tax credit. Sales are reported on a BAS, and tax invoices are required for sales of $82.50 or more.
+
+**New Zealand (GST return):** 15% GST, claimable as input tax with valid GST records. Since 1 April 2023 the "tax invoice" has been replaced by **taxable supply information**, required above $200 (GST inclusive) but not at or below it. Entertainment is generally only 50% deductible. See [jurisdictions/nz.md](../../jurisdictions/nz.md) for the full set of rules.
 
 Ask the user for their jurisdiction before applying categories.
 
@@ -159,7 +161,7 @@ Potential personal expenses flagged: 3
 
 ```yaml
 skill: expense-categorization
-version: 3.1
+version: 3.3
 input: transaction list (from receipt-processing or bank statement)
 output: categorized transaction table with Schedule C line mapping
 dependencies:

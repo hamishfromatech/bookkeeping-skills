@@ -57,6 +57,7 @@ General bookkeeping procedure lives in the skills. Country-specific tax, deducti
 |---|---|---|
 | United States | [`jurisdictions/us.md`](jurisdictions/us.md) | Schedule C mapping, 1099-NEC, estimated taxes, Section 179 and bonus depreciation, meals, vehicle, home office |
 | Australia | [`jurisdictions/au.md`](jurisdictions/au.md) | GST and BAS, tax invoices, instant asset write-off, cents-per-km and logbook, WFH fixed rate, PAYG, TPAR, superannuation |
+| New Zealand | [`jurisdictions/nz.md`](jurisdictions/nz.md) | GST returns and taxable supply information, ACC earners' levy, provisional tax, kilometre rates, square metre rate, low-value assets, schedular payments, KiwiSaver |
 
 Each pack carries a `Current-law constants` table with per-row `Source` and `Verified` dates, plus a `Last reviewed` date. If a pack is more than twelve months old the tooling says so and every figure must be treated as unverified.
 
@@ -129,7 +130,7 @@ Each skill is self-contained. Copy the whole folder so its `references/` and `sc
 | [contractor-1099](skills/contractor-1099/SKILL.md) | US | W-9 collection, 1099-NEC, deadlines, penalties |
 | [estimated-taxes](skills/estimated-taxes/SKILL.md) | US | Quarterly payments, SE tax, safe harbours |
 
-For Australia, load [`jurisdictions/au.md`](jurisdictions/au.md) alongside the workflow skills. The US specialist skills do not apply.
+For Australia and New Zealand, load the local pack alongside the workflow skills. The US specialist skills do not apply — in particular there is no 1099-NEC or Section 179 outside the US, and the $2,500 de minimis is replaced by New Zealand's $1,000 low-value threshold.
 
 ## Companion MCP server
 

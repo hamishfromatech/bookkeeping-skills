@@ -75,7 +75,12 @@ Rules for using it:
 
 JurisdictionCode = Annotated[
     str,
-    Field(description="Jurisdiction pack code: 'us' or 'au' (aliases: usa, united states, australia)"),
+    Field(
+        description=(
+            "Jurisdiction pack code: 'us', 'au' or 'nz' "
+            "(aliases: usa, united states, australia, new zealand, aotearoa)"
+        )
+    ),
 ]
 
 Amount = Annotated[float, Field(description="Monetary amount. Strings like '1,234.56' are also accepted.")]

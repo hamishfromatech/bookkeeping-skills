@@ -1,10 +1,10 @@
 ---
 name: bookkeeping
-description: Small-business bookkeeping skills for converting financial evidence into accountant-reviewable outputs, including setup/context, income and invoicing, receipt processing, expense categorization, bank reconciliation, monthly close, tax preparation, jurisdiction-aware tax references (US and AU), plus specialized skills for home office, vehicle, meals, depreciation, 1099 contractors, and estimated taxes. Trigger on "help me with my bookkeeping", "set up my bookkeeping", "bookkeeping context", "chart of accounts", "invoice my clients", "process my receipts", "categorize expenses", "reconcile my bank statement", "get my books ready for taxes", "close the month", "organize my finances".
+description: Small-business bookkeeping skills for converting financial evidence into accountant-reviewable outputs, including setup/context, income and invoicing, receipt processing, expense categorization, bank reconciliation, monthly close, tax preparation, jurisdiction-aware tax references (US, AU and NZ), plus specialized skills for home office, vehicle, meals, depreciation, 1099 contractors, and estimated taxes. Trigger on "help me with my bookkeeping", "set up my bookkeeping", "bookkeeping context", "chart of accounts", "invoice my clients", "process my receipts", "categorize expenses", "reconcile my bank statement", "get my books ready for taxes", "close the month", "organize my finances".
 license: MIT
 compatibility: Designed for skills-compatible agents with network access and access to browser, filesystem, spreadsheet, or accounting connectors.
 metadata:
-  version: "3.2"
+  version: "3.3"
   execution-mode: semi-automated
 allowed-tools: Read Write Edit WebFetch
 ---
@@ -35,6 +35,7 @@ General bookkeeping workflow lives in the skill files. Jurisdiction-specific tax
 |---|---|---|
 | United States | [jurisdictions/us.md](jurisdictions/us.md) | Schedule C mapping, 1099-NEC readiness, estimated taxes, depreciation, meals, vehicle, home office |
 | Australia | [jurisdictions/au.md](jurisdictions/au.md) | GST and BAS, instant asset write-off, cents-per-km and logbook, WFH fixed rate, PAYG, TPAR, super |
+| New Zealand | [jurisdictions/nz.md](jurisdictions/nz.md) | GST returns and taxable supply information, provisional tax, ACC levies, kilometre rates, square metre rate, low-value assets, schedular payments, KiwiSaver |
 
 If the user's jurisdiction is unknown, continue only with jurisdiction-neutral work: evidence capture, transaction normalization, source trails, review queues, and reconciliation structure. Ask for jurisdiction before applying tax-specific rules.
 
@@ -124,7 +125,7 @@ When a user says any of the following, one or more skills apply:
 
 ```yaml
 skill: bookkeeping
-version: 3.2
+version: 3.3
 author: The A-Tech Corporation PTY LTD (fork, https://atech.industries); original work by Receiptor AI (https://receiptor.ai)
 license: MIT
 community: https://www.skool.com/open-source-ai-builders-club/about
@@ -146,4 +147,5 @@ capabilities:
 jurisdictions:
   - us
   - au
+  - nz
 ```

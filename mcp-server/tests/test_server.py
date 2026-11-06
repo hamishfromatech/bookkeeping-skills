@@ -58,7 +58,7 @@ async def test_list_jurisdictions(server, repo_root: Path):
         result = await call(client, "list_jurisdictions")
     assert result["repo_root"] == str(repo_root)
     codes = {entry["code"] for entry in result["jurisdictions"]}
-    assert codes == {"us", "au"}
+    assert codes == {"us", "au", "nz"}
 
 
 async def test_get_constants_filters(server):

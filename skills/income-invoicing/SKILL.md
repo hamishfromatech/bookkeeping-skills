@@ -5,7 +5,7 @@ description: Capture sales and revenue, issue and track invoices, manage receiva
 license: MIT
 compatibility: Designed for skills-compatible agents with access to invoices, sales records, payment-processor exports, bank statements, or accounting exports.
 metadata:
-  version: "3.2"
+  version: "3.3"
   execution-mode: semi-automated
   artifact-types: table,csv,json,revenue-register,ar-summary
 allowed-tools: Read Write Edit WebFetch
@@ -92,6 +92,7 @@ Invoice numbering must be **sequential and never reused**, because tax authoriti
 **Jurisdiction-specific invoice requirements:**
 
 - **Australia** — a tax invoice is required for sales of $82.50 or more (incl. GST). It must show the seller's identity and ABN, the date, a description of what was sold, the GST amount (or that the total includes GST), and for sales of $1,000 or more, the buyer's identity or ABN. Sales that are GST-free must say so.
+- **New Zealand** — since 1 April 2023 the "tax invoice" concept was replaced by **taxable supply information**. It is not required at or below $200 (GST inclusive), is required above $200, and needs additional detail above $1,000. GST is 15% and must be shown or stated as included. See [jurisdictions/nz.md](../../jurisdictions/nz.md).
 - **US** — no federal invoice format, but state sales-tax rules require the tax to be separately stated where sales tax applies, and nexus rules determine whether it applies at all.
 
 ### 4. Handle receivables and aging
@@ -233,7 +234,7 @@ Require professional review when:
 
 ```yaml
 skill: income-invoicing
-version: 3.2
+version: 3.3
 input: invoice records, sales exports, processor settlements, bank deposits
 output: revenue register + AR aging + exception queue
 automation_boundary: extract-draft-and-summarise

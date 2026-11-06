@@ -3,6 +3,30 @@
 All notable changes to this skill pack. Versions apply to the skill content, not
 to the repository as a product.
 
+## 3.3 — 2026-11-06
+
+### Added
+
+- **New Zealand jurisdiction pack** (`jurisdictions/nz.md`): GST at 15% and the
+  $60,000 registration threshold, GST return calendar and frequencies, the
+  taxable-supply-information rules that replaced tax invoices on 1 April 2023,
+  individual rates from 1 April 2025, company tax at 28%, ACC earners' levy and
+  maximum liable earnings, provisional tax threshold and 105%/110% uplift,
+  kilometre rates by vehicle type with the 14,000 km tier split, the home office
+  square metre rate, the $1,000 low-value asset threshold, KiwiSaver at 3.5%,
+  schedular-payment withholding, and 7-year record retention.
+- The pack documents one deliberate wrinkle: IRD publishes the kilometre rates
+  and square metre rate *after* an income year ends, so the 2026-27 pack carries
+  the latest published (2025-26) sets and requires claims to be marked
+  provisional rather than extrapolated.
+
+### Changed
+
+- `expense-categorization` and `income-invoicing` now cover New Zealand GST and
+  taxable supply information alongside the Australian and US rules.
+- `bookkeeping-mcp` recognises `nz` and the aliases `new zealand`, `aotearoa` and
+  `nzl`; the constants parser and tool tests cover all three packs.
+
 ## 3.2 — 2026-11-06
 
 ### Added
