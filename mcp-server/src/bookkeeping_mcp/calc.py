@@ -782,65 +782,74 @@ def acc_levy(
     liable_income,
     work_levy_rate_per_100,
     earners_levy_rate_per_100,
+    working_safer_rate_per_100,
     max_liable_earnings,
     gst_rate_percent=15.0,
     include_gst=True,
 ) -> dict:
-    """Estimate the two ACC self-employed levies.
+    """Estimate a New Zealand self-employed ACC invoice.
 
-    ``work_levy_rate_per_100`` comes from the business's classification unit;
-    ``earners_levy_rate_per_100`` is flat. Rates are expected excluding GST.
+    Three levies are charged on the same liable-earnings base:
 
-    The earners' levy is capped at ``max_liable_earnings``. The work levy cap is
-    *not* applied — ACC's Work Account maximum is stated separately and must be
-    confirmed before an invoice is relied on.
+    * the trade-specific Work Account levy (from the classification unit)
+    * the flat Working Safer levy ($0.08 per $100)
+    * the flat Earners' levy ($1.52 per $100)
+
+    The base is capped at the maximum liable earnings for the levy year. The
+    statutory minimum is not applied here — it depends on the taxpayer's
+    circumstances and is surfaced from the jurisdiction pack instead.
     """
     income = to_decimal(liable_income, "liable_income")
     work_rate = to_decimal(work_levy_rate_per_100, "work_levy_rate_per_100")
     earners_rate = to_decimal(earners_levy_rate_per_100, "earners_levy_rate_per_100")
+    safer_rate = to_decimal(working_safer_rate_per_100, "working_safer_rate_per_100")
     cap = to_decimal(max_liable_earnings, "max_liable_earnings")
     gst_rate = to_rate(gst_rate_percent, "gst_rate_percent")
 
     if income < 0:
         raise MoneyError("liable_income must be zero or positive")
-    if work_rate < 0 or earners_rate < 0:
+    if min(work_rate, earners_rate, safer_rate) < 0:
         raise MoneyError("levy rates must be zero or positive")
     if cap <= 0:
         raise MoneyError("max_liable_earnings must be greater than zero")
 
-    work_levy = quantize(income / HUNDRED * work_rate, 2)
-    earners_base = min(income, cap)
-    earners_levy = quantize(earners_base / HUNDRED * earners_rate, 2)
-    subtotal = quantize(work_levy + earners_levy, 2)
+    base = min(income, cap)
+    capped = income > cap
 
+    def levy(rate: Decimal, field: str) -> dict:
+        return {
+            "rate_per_100": as_number(quantize(rate, 4)),
+            "amount": _money(quantize(base / HUNDRED * rate, 2)),
+        }
+
+    work = levy(work_rate, "work_levy")
+    safer = levy(safer_rate, "working_safer_levy")
+    earners = levy(earners_rate, "earners_levy")
+
+    subtotal = quantize(
+        Decimal(str(work["amount"])) + Decimal(str(safer["amount"])) + Decimal(str(earners["amount"])),
+        2,
+    )
     gst = quantize(pct_of(subtotal, gst_rate), 2) if include_gst else Decimal("0")
     total = quantize(subtotal + gst, 2)
 
-    capped = income > cap
     notes = [
-        "rates are per $100 of liable earnings, excluding GST",
-        "earners' levy capped at the maximum liable earnings",
-        "work levy cap not applied — confirm ACC's Work Account maximum before relying on this",
-        "IRD publishes $1.75 per $100 including GST, which is $1.5217 excluding GST; the "
-        "rounded $1.52 differs by a few dollars at the maximum",
+        "all three levies are calculated on the same liable-earnings base, capped at the maximum",
+        "guidebook rates are exclusive of GST; GST is added on the invoice",
+        "statutory minimum liable earnings are not applied here — check the pack for low-income cases",
     ]
     if capped:
         notes.append(
-            f"liable income exceeds the earners' levy cap; only {money_str(cap)} is levied"
+            f"liable income exceeds the maximum; levies are calculated on {money_str(base)}"
         )
 
     return {
         "liable_income": _money(income),
-        "work_levy": {
-            "rate_per_100": as_number(quantize(work_rate, 4)),
-            "amount": _money(work_levy),
-        },
-        "earners_levy": {
-            "rate_per_100": as_number(quantize(earners_rate, 4)),
-            "levied_on": _money(earners_base),
-            "capped": capped,
-            "amount": _money(earners_levy),
-        },
+        "liable_base": _money(base),
+        "capped": capped,
+        "work_levy": work,
+        "working_safer_levy": safer,
+        "earners_levy": earners,
         "subtotal_excluding_gst": _money(subtotal),
         "gst_percent": as_number(quantize(gst_rate, 2)),
         "gst": _money(gst),

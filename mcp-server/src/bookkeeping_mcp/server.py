@@ -537,11 +537,12 @@ def build_server(root: Path | None = None) -> FastMCP:
         ],
         include_gst: Annotated[bool, Field(description="Add 15% GST, as ACC invoices it")] = True,
     ) -> AccLevyEstimate:
-        """Estimate the two New Zealand self-employed ACC levies.
+        """Estimate a New Zealand self-employed ACC invoice.
 
-        Combines the trade-specific work levy with the flat earners' levy. The
-        earners' levy is capped at the maximum liable earnings from the pack; the
-        work levy cap is not applied.
+        Three levies on one capped base: the trade-specific work levy, the flat
+        Working Safer levy, and the flat earners' levy. The base is capped at the
+        maximum liable earnings from the pack. The statutory minimum is not
+        applied — it depends on the taxpayer's circumstances.
         """
         try:
             schedule = get_acc_levy_schedule(repo_root)
@@ -564,24 +565,28 @@ def build_server(root: Path | None = None) -> FastMCP:
 
         row = rows[0]
         earners_rate = None
+        safer_rate = None
         max_earnings = None
         for constant in pack.rows:
             topic = constant.topic.lower()
             if "earners' levy rate (excluding gst)" in topic and constant.numbers:
                 earners_rate = constant.numbers[0]
+            elif "working safer" in topic and constant.numbers:
+                safer_rate = constant.numbers[0]
             elif topic.startswith("acc maximum liable earnings") and constant.numbers:
                 max_earnings = constant.numbers[0]
 
-        if earners_rate is None or max_earnings is None:
+        if earners_rate is None or safer_rate is None or max_earnings is None:
             raise ValueError(
-                "The NZ pack is missing the earners' levy rate or the maximum liable "
-                "earnings; add them to jurisdictions/nz.md before estimating."
+                "The NZ pack is missing the earners' levy rate, the Working Safer rate or "
+                "the maximum liable earnings; add them to jurisdictions/nz.md."
             )
 
         result = calc.acc_levy(
             liable_income,
             work_levy_rate_per_100=row.rate,
             earners_levy_rate_per_100=earners_rate,
+            working_safer_rate_per_100=safer_rate,
             max_liable_earnings=max_earnings,
             include_gst=include_gst,
         )

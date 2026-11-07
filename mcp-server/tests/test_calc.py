@@ -312,34 +312,46 @@ def test_ar_aging_uses_partial_payments():
 # --------------------------------------------------------------- ACC levies
 
 
-def test_acc_levy_combines_both_levies():
-    result = calc.acc_levy(120000, work_levy_rate_per_100=1.76, earners_levy_rate_per_100=1.52,
-                           max_liable_earnings=156641)
+def test_acc_levy_combines_three_levies_on_one_base():
+    result = calc.acc_levy(
+        120000,
+        work_levy_rate_per_100=1.76,
+        earners_levy_rate_per_100=1.52,
+        working_safer_rate_per_100=0.08,
+        max_liable_earnings=156641,
+    )
     assert result["work_levy"]["amount"] == 2112.0
+    assert result["working_safer_levy"]["amount"] == 96.0
     assert result["earners_levy"]["amount"] == 1824.0
-    assert result["subtotal_excluding_gst"] == 3936.0
-    assert result["gst"] == 590.4
-    assert result["total_including_gst"] == 4526.4
-    assert result["earners_levy"]["capped"] is False
+    assert result["subtotal_excluding_gst"] == 4032.0
+    assert result["gst"] == 604.8
+    assert result["total_including_gst"] == 4636.8
+    assert result["capped"] is False
 
 
-def test_acc_levy_caps_earners_levy_only():
-    result = calc.acc_levy(200000, work_levy_rate_per_100=1.76, earners_levy_rate_per_100=1.52,
-                           max_liable_earnings=156641)
-    assert result["earners_levy"]["capped"] is True
-    assert result["earners_levy"]["levied_on"] == 156641.0
+def test_acc_levy_caps_the_whole_base():
+    result = calc.acc_levy(200000, 1.76, 1.52, 0.08, 156641)
+    assert result["capped"] is True
+    assert result["liable_base"] == 156641.0
+    assert result["work_levy"]["amount"] == 2756.88
+    assert result["working_safer_levy"]["amount"] == 125.31
     assert result["earners_levy"]["amount"] == 2380.94
-    # work levy is not capped by this function
-    assert result["work_levy"]["amount"] == 3520.0
-    assert any("work levy cap not applied" in note for note in result["notes"])
+    assert result["subtotal_excluding_gst"] == 5263.13
+    assert result["total_including_gst"] == 6052.60
 
 
 def test_acc_levy_can_omit_gst():
-    result = calc.acc_levy(100000, 2.25, 1.52, 156641, include_gst=False)
+    result = calc.acc_levy(100000, 2.25, 1.52, 0.08, 156641, include_gst=False)
     assert result["gst"] == 0.0
-    assert result["total_including_gst"] == result["subtotal_excluding_gst"] == 3770.0
+    assert result["subtotal_excluding_gst"] == 3850.0
+    assert result["total_including_gst"] == 3850.0
+
+
+def test_acc_levy_notes_the_minimum_is_not_applied():
+    result = calc.acc_levy(20000, 1.76, 1.52, 0.08, 156641)
+    assert any("minimum" in note for note in result["notes"])
 
 
 def test_acc_levy_rejects_negative_income():
     with pytest.raises(MoneyError):
-        calc.acc_levy(-1, 1.0, 1.0, 156641)
+        calc.acc_levy(-1, 1.0, 1.0, 0.08, 156641)

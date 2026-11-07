@@ -143,9 +143,11 @@ the IRS changed it mid-year:
 | Tool | What it does |
 |---|---|
 | `acc_work_levy_rates` | Work levy rates by classification unit, searched by trade name, job title (`sparky`, `roofer`, `brickie`) or CU number |
-| `acc_levy_estimate` | Work levy + earners' levy + GST from liable income and a trade |
+| `acc_levy_estimate` | Work levy + Working Safer + earners' levy, on the capped base, plus GST |
 
 Rates come from the `ACC work levy` table in [`jurisdictions/nz.md`](../jurisdictions/nz.md), which mirrors Schedule 2 of the Work Account Levies Regulations 2025 for 2026/27. A job title that spans two CUs (`builder`) returns both and refuses to guess.
+
+The estimate charges all three levies on one base, capped at the maximum liable earnings ($156,641 for 2026/27): the trade work levy, the flat Working Safer levy ($0.08 per $100), and the flat earners' levy ($1.52 per $100). The statutory minimum ($50,501) is surfaced as a constant but not applied.
 
 ### Calculation
 

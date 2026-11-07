@@ -64,7 +64,9 @@ If entity type is unknown, draft records only and flag entity-specific treatment
 | Taxable supply information required | 2026-27 | Not required at or below **$200** (GST inclusive); required above $200; additional detail above $1,000 | [IRD taxable supply information](https://www.ird.govt.nz/gst/tax-invoices-for-gst) | 2026-11-06 |
 | ACC earners' levy rate (excluding GST) | 2026-27 | **$1.52 per $100** of liable earnings | [IRD ACC earners' levy rates](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/acc-clients-and-carers/acc-earners-levy-rates) | 2026-11-06 |
 | ACC earners' levy rate (including GST) | 2026-27 | **$1.75 per $100** of liable earnings (1.75%) | [IRD ACC earners' levy rates](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/acc-clients-and-carers/acc-earners-levy-rates) | 2026-11-06 |
-| ACC maximum liable earnings | 2026-27 | **$156,641** (maximum earners' levy $2,741.22) | [IRD ACC rates](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/acc-clients-and-carers/acc-earners-levy-rates) | 2026-11-06 |
+| ACC maximum liable earnings | 2026-27 | **$156,641** — the liable-earnings cap for the levy calculation (2027-28: $160,244) | [MBIE ACC levy rates](https://www.mbie.govt.nz/business-and-employment/employment-and-skills/employment-legislation-reviews/setting-the-average-acc-levy-rates-for-2025-26-2026-27-and-2027-28) | 2026-11-06 |
+| ACC minimum liable earnings | 2026-27 | **$50,501** (2027-28: $51,632) — check before applying to a low-income sole trader | [MBIE ACC levy rates](https://www.mbie.govt.nz/business-and-employment/employment-and-skills/employment-legislation-reviews/setting-the-average-acc-levy-rates-for-2025-26-2026-27-and-2027-28) | 2026-11-06 |
+| ACC Working Safer levy | 2026-27 | **$0.08 per $100** of liable earnings, flat, in addition to the work levy | [ACC Levy Guidebook 2026/27](https://www.acc.co.nz/assets/business/Levy-Guidebook-2026-2027.pdf) | 2026-11-06 |
 | Provisional tax threshold | 2026-27 | Required when residual income tax exceeds **$5,000** | [IRD provisional tax](https://www.ird.govt.nz/income-tax/provisional-tax) | 2026-11-06 |
 | Provisional tax — standard uplift | 2026-27 | **105%** of the prior year's residual income tax, or **110%** of the year before that once filed | [IRD provisional tax](https://www.ird.govt.nz/income-tax/provisional-tax) | 2026-11-06 |
 | Kilometre rate — petrol | 2025-26 | Tier 1 **$1.20/km** (first 14,000 km of total travel); Tier 2 **37c/km** | [IRD kilometre rates 2025-2026](https://www.ird.govt.nz/income-tax/income-tax-for-businesses-and-organisations/types-of-business-expenses/claiming-vehicle-expenses/kilometre-rates-2025-2026) | 2026-11-06 |
@@ -138,17 +140,22 @@ Rates below are **per $100 of liable earnings, excluding GST**, as published in 
 ### How the levy is calculated
 
 ```text
-work levy      = liable earnings ÷ 100 × CU rate
-earners' levy  = liable earnings ÷ 100 × 1.52   (capped at the maximum liable earnings)
+liable base    = liable earnings, capped at the maximum liable earnings ($156,641)
+work levy      = liable base ÷ 100 × CU rate
+Working Safer  = liable base ÷ 100 × 0.08
+earners' levy  = liable base ÷ 100 × 1.52
 GST            = 15% of the levy subtotal
 ```
+
+All three levies are charged on the same capped base, and all rates in the guidebook
+are exclusive of GST.
 
 Two figures are commonly confused:
 
 - The **Work levy** is the CU rate above. It is risk-rated by trade.
 - The **Earners' levy** is flat for everyone: $1.52 per $100 excluding GST, which is $1.75 including GST — the figure IRD quotes as 1.75%.
 
-The Working Safer levy (WorkSafe funding) is collected through ACC's levy rather than billed separately in this schedule. Read the guidebook if you need the component split: [ACC Levy Guidebook 2026-2027](https://www.acc.co.nz/assets/business/Levy-Guidebook-2026-2027.pdf).
+The **Working Safer levy** funds WorkSafe and is a flat **$0.08 per $100** on top of the work levy — it is not part of the CU rate, so it must be added separately. The guidebook confirms all levy rates are exclusive of GST: [ACC Levy Guidebook 2026-2027](https://www.acc.co.nz/assets/business/Levy-Guidebook-2026-2027.pdf).
 
 ### Choosing the right CU
 

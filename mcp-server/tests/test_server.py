@@ -224,8 +224,9 @@ async def test_acc_levy_estimate_uses_trade_rate(server):
         )
     assert result["cu"] == "42420"
     assert result["work_levy"]["amount"] == 2112.0
+    assert result["working_safer_levy"]["amount"] == 96.0
     assert result["earners_levy"]["amount"] == 1824.0
-    assert result["total_including_gst"] == 4526.4
+    assert result["total_including_gst"] == 4636.8
 
 
 async def test_acc_levy_estimate_rejects_ambiguous_trade(server):

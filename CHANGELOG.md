@@ -3,6 +3,31 @@
 All notable changes to this skill pack. Versions apply to the skill content, not
 to the repository as a product.
 
+## 3.5 — 2026-11-06
+
+### Fixed
+
+- **The ACC estimate was understating the invoice.** The [ACC Levy Guidebook 2026/27](https://www.acc.co.nz/assets/business/Levy-Guidebook-2026-2027.pdf)
+  (p.10) states the **Working Safer levy** is a flat **$0.08 per $100** of liable
+  earnings collected *in addition to* the work levy. `acc_levy_estimate` omitted
+  it, so every estimate was low by $80 per $100,000 of liable earnings.
+- **The liable-earnings cap now applies to the whole calculation.** MBIE's
+  levy-setting page confirms maximum liable earnings of **$156,641** for the
+  2026/27 levy period ($160,244 for 2027/28), and the guidebook describes a single
+  cap for the levy calculation. Previously only the earners' levy was capped.
+
+### Added
+
+- `ACC minimum liable earnings` constant: **$50,501** for 2026/27. Surfaced, not
+  applied — whether it bites depends on the taxpayer.
+
+### Changed
+
+- `acc_levy_estimate` now returns `liable_base`, `capped`, and a
+  `working_safer_levy` component, and charges all three levies on the same base.
+- At $120,000 a roofer's estimate moves from $5,202.60 to **$5,313.00**; a sparky
+  from $3,036.00 to **$3,146.40**.
+
 ## 3.4 — 2026-11-06
 
 ### Added

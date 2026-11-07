@@ -156,17 +156,15 @@ class LevyComponent(BaseModel):
     amount: float
 
 
-class EarnersLevyComponent(LevyComponent):
-    levied_on: float
-    capped: bool
-
-
 class AccLevyEstimate(BaseModel):
     cu: str
     classification: str
     liable_income: float
+    liable_base: float = Field(description="Liable income after the maximum liable earnings cap")
+    capped: bool = Field(description="True when the cap reduced the liable base")
     work_levy: LevyComponent
-    earners_levy: EarnersLevyComponent
+    working_safer_levy: LevyComponent
+    earners_levy: LevyComponent
     subtotal_excluding_gst: float
     gst_percent: float
     gst: float
