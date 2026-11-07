@@ -50,7 +50,9 @@ python3 -m pytest mcp-server/tests -q
 - every jurisdiction pack has a `Last reviewed` date, a `Current-law constants` section, and a `Verified` column
 - `SKILL.md` skill map matches the folders present on disk
 
-Run it before every commit. CI runs it on push and pull request.
+Run it before every commit. Automatic CI is disabled in this repository: the
+workflow in `.github/workflows/validate.yml` is manual-only (`workflow_dispatch`),
+so these commands are the gate, not a check that happens for you.
 
 ## Editing rules
 

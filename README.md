@@ -200,7 +200,9 @@ python3 -m pip install -e "./mcp-server[dev]"
 python3 -m pytest mcp-server/tests -q  # 114 server tests
 ```
 
-`validate_skills.py` enforces the invariant that keeps the pack honest: a year-specific figure must live in a jurisdiction pack, never in a skill body. CI runs the validator, both test suites, and a real stdio handshake against the MCP server on Python 3.10–3.12.
+`validate_skills.py` enforces the invariant that keeps the pack honest: a year-specific figure must live in a jurisdiction pack, never in a skill body.
+
+Automatic CI is disabled for this repository. The workflow is kept at [`.github/workflows/validate.yml`](.github/workflows/validate.yml) and runs the validator, both test suites and a real stdio handshake on Python 3.10–3.12, but only when triggered by hand from the Actions tab.
 
 See [`AGENTS.md`](AGENTS.md) for repository conventions and [`CHANGELOG.md`](CHANGELOG.md) for history.
 

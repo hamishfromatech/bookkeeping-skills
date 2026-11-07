@@ -1,9 +1,23 @@
 name: validate
 
+# Automatic CI is disabled for this repository.
+#
+# The workflow is kept because the checks are useful, but nothing runs on push or
+# pull request. Triggers were changed rather than the file deleted so that turning
+# it back on is a one-line edit: uncomment the push/pull_request blocks below.
+#
+# To also remove it from the Actions tab entirely, use
+#   GitHub -> Actions -> validate -> "..." -> Disable workflow
+#
+# Run the same checks locally at any time:
+#   python3 scripts/validate_skills.py
+#   python3 -m pytest tests/ -q
+#   python3 -m pip install -e "./mcp-server[dev]" && python3 -m pytest mcp-server/tests -q
+
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # push:
+  #   branches: [main]
+  # pull_request:
   workflow_dispatch:
 
 concurrency:

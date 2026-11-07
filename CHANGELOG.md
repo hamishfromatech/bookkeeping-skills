@@ -3,6 +3,26 @@
 All notable changes to this skill pack. Versions apply to the skill content, not
 to the repository as a product.
 
+## 3.7 — 2026-11-06
+
+### Changed
+
+- **Automatic CI is disabled.** `.github/workflows/validate.yml` now triggers only on
+  `workflow_dispatch`, so nothing runs on push or pull request. The checks are kept
+  intact and re-enabling is a two-line edit; the file explains how. The local
+  commands remain the gate (`scripts/validate_skills.py`, both pytest suites).
+
+### Fixed
+
+- **Direct calls to a hidden tool now fail cleanly.** In search mode, calling e.g.
+  `sales_tax` directly used to log `Tool 'sales_tax' not listed, no validation will
+  be performed` from the MCP SDK and then return a bare `Unknown tool`. The server
+  now intercepts the call and replies in the normal tool-error shape: *"Tool
+  'sales_tax' is not listed in search mode. Call run_tool with name='sales_tax' and
+  the arguments it needs, or use search_tools to pick a tool."* No SDK warning is
+  emitted, and the guard is best-effort so a future SDK change degrades to the old
+  behaviour rather than breaking the server.
+
 ## 3.6 — 2026-11-06
 
 ### Added

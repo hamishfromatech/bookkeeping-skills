@@ -347,3 +347,11 @@ async def test_run_tool_points_skills_at_their_resource(repo_root: Path):
     async with Client(trimmed) as client:
         with pytest.raises(Exception, match="skill://schedule-c-categories"):
             await call(client, "run_tool", {"name": "schedule-c-categories", "arguments": {}})
+
+
+async def test_direct_call_to_a_hidden_tool_is_refused_with_the_fix(repo_root: Path):
+    """The old behaviour logged an SDK warning and returned a bare 'Unknown tool'."""
+    trimmed = build_server(repo_root, tool_mode="search")
+    async with Client(trimmed) as client:
+        with pytest.raises(Exception, match="run_tool with name='sales_tax'"):
+            await call(client, "sales_tax", {"amount": 110, "rate_percent": 10})

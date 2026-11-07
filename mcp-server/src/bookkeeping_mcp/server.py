@@ -104,6 +104,53 @@ def _repo_error(exc: RepositoryError) -> ValueError:
     return ValueError(str(exc))
 
 
+def _install_direct_call_guard(mcp: FastMCP, hidden: set[str]) -> None:
+    """Answer a direct call to a hidden tool with a clean, actionable error.
+
+    In search mode the hidden tools are removed from the tool manager, so a
+    direct call falls through to the low-level SDK, which logs
+    "Tool '<name>' not listed, no validation will be performed" and then fails
+    with a bare "Unknown tool". That is noise in a log and a dead end for the
+    model. Intercepting the protocol handler lets us reply in the same shape as
+    any other tool error, with the fix in the message.
+
+    Best-effort by design: if a future SDK moves these hooks, the server keeps
+    working and simply falls back to the old behaviour.
+    """
+    try:
+        from mcp import types
+
+        handlers = getattr(getattr(mcp, "_mcp_server", None), "request_handlers", None)
+        if not isinstance(handlers, dict):
+            return
+        original = handlers.get(types.CallToolRequest)
+        if original is None:
+            return
+
+        async def guarded(request):
+            name = getattr(getattr(request, "params", None), "name", "")
+            if name in hidden:
+                message = (
+                    f"Tool {name!r} is not listed in search mode. Call run_tool with "
+                    f"name={name!r} and the arguments it needs, or use search_tools to pick "
+                    "a tool. See search_tools(detail=...) for the exact parameter schema."
+                )
+                make_error = getattr(mcp._mcp_server, "_make_error_result", None)
+                if callable(make_error):
+                    return make_error(message)
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[types.TextContent(type="text", text=message)],
+                        isError=True,
+                    )
+                )
+            return await original(request)
+
+        handlers[types.CallToolRequest] = guarded
+    except Exception:  # pragma: no cover - cosmetic guard, never break the server
+        return
+
+
 def build_server(root: Path | None = None, tool_mode: str | None = None) -> FastMCP:
     """Build the server.
 
@@ -734,9 +781,10 @@ def build_server(root: Path | None = None, tool_mode: str | None = None) -> Fast
 
     if tool_mode == "search":
         mcp.tool()(run_tool)
-        for name in list(snapshot):
-            if name not in CORE_TOOLS:
-                live.pop(name, None)
+        hidden = {name for name in snapshot if name not in CORE_TOOLS}
+        for name in hidden:
+            live.pop(name, None)
+        _install_direct_call_guard(mcp, hidden)
 
     return mcp
 
