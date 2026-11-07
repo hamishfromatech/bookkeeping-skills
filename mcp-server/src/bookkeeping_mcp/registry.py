@@ -249,7 +249,7 @@ REGISTRY: tuple[ToolEntry, ...] = (
         name="acc_levy_estimate",
         group="nz-acc",
         summary="Estimate a NZ self-employed ACC invoice: work levy, Working Safer levy, earners' levy, capped and GST-added.",
-        use_when="ACC invoice; how much will ACC charge me; self employed ACC cost; levy on my income",
+        use_when="ACC invoice; how much will ACC charge me; ACC cost; self employed ACC cost; levy on my income; what will ACC cost for a roofer; sparky; builder; carpenter; tradie on 120k",
         params=("liable_income", "trade"),
         example={"liable_income": 120000, "trade": "roofer"},
     ),
@@ -331,7 +331,7 @@ SKILL_ENTRIES: tuple[ToolEntry, ...] = (
         name="schedule-c-categories",
         group="skill",
         summary="US Schedule C line-by-line reference: what belongs on each line and what does not.",
-        use_when="is this deductible; which line does this go on; schedule c line; can I claim this expense; business expense or personal",
+        use_when="is this deductible; is a laptop deductible; laptop; computer; phone; tools; equipment; which line does this go on; schedule c line; can I claim this expense; business expense or personal",
         kind="skill",
     ),
     ToolEntry(
@@ -395,6 +395,16 @@ STOPWORDS = frozenset(
 # amount colliding with a percentage in a description is pure noise. Form and
 # section numbers are the exception, because they are genuine identifiers.
 TAX_IDENTIFIERS = frozenset({"179", "1099", "1040", "1042", "8829", "4562", "1099k", "1099misc"})
+
+
+QUESTION_MARKERS = frozenset(
+    {"is", "are", "can", "should", "could", "does", "do", "am", "may", "allowed", "allowedto"}
+)
+
+
+def _question_like(text: str) -> bool:
+    words = set(_tokens(text))
+    return bool(words & QUESTION_MARKERS) or text.strip().endswith("?")
 
 
 def _tokens(text: str) -> list[str]:
@@ -469,7 +479,17 @@ def search_registry(query: str, limit: int = 5) -> list[tuple[float, ToolEntry]]
         if score > 0:
             scored.append((round(score, 4), entry))
 
-    scored.sort(key=lambda pair: (-pair[0], pair[1].name))
+    # Ties are common on short queries. When the user is asking a question
+    # ("is a laptop deductible"), the procedure is the safer answer than the
+    # nearest calculator; otherwise prefer the tool.
+    asks = _question_like(text)
+
+    def tie_break(pair: tuple[float, ToolEntry]) -> tuple:
+        _score, entry = pair
+        kind_rank = 0 if (asks and entry.kind == "skill") else (1 if entry.kind == "tool" else 2)
+        return (-_score, kind_rank, entry.name)
+
+    scored.sort(key=tie_break)
     return scored[: max(1, limit)]
 
 

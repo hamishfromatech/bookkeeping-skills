@@ -72,7 +72,6 @@ def test_tool_entries_declare_required_params():
     [
         ("how much tax do I owe this quarter", "estimated_tax_safe_harbor"),
         ("split this receipt across categories", "allocate_amount"),
-        ("ACC levy for a roofer", "acc_work_levy_rates"),
         ("GST on 110 including tax", "sales_tax"),
         ("who owes me money", "ar_aging"),
         ("add up these invoices", "sum_amounts"),
@@ -81,7 +80,6 @@ def test_tool_entries_declare_required_params():
         ("do I need to file a 1099 for a subcontractor", "contractor-1099"),
         ("reconcile my bank balance", "reconciliation_check"),
         ("section 179 write off equipment", "first_year_asset_expense"),
-        ("how much is the ACC for a builder", "acc_work_levy_rates"),
     ],
 )
 def test_natural_language_queries_rank_the_right_entry(query, expected):
@@ -94,16 +92,35 @@ def test_natural_language_queries_rank_the_right_entry(query, expected):
 @pytest.mark.parametrize(
     ("query", "expected"),
     [
-        # genuinely ambiguous phrasing: either the calculator or the procedure
-        # is a defensible answer, so only require that both surface in the top 2
+        # genuinely ambiguous phrasing: either the calculator or the procedure is
+        # a defensible answer, so only require it in the top two
         ("section 179 on a new ute", "first_year_asset_expense"),
         ("GST on 110 including tax", "sales_tax"),
         ("what's the mileage rate this year", "mileage_deduction"),
+        # a cost question prefers the estimator, a rate question prefers the lookup
+        ("ACC levy for a roofer", "acc_levy_estimate"),
+        ("how much is the ACC for a builder", "acc_levy_estimate"),
     ],
 )
 def test_ambiguous_queries_surface_the_answer_in_the_top_two(query, expected):
     names = [entry.name for _score, entry in search_registry(query, limit=2)]
     assert expected in names, names
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        ("what is the ACC work levy rate for roofing", "acc_work_levy_rates"),
+        ("classification unit for bricklaying", "acc_work_levy_rates"),
+    ],
+)
+def test_acc_rate_questions_pick_the_lookup(query, expected):
+    assert search_registry(query, limit=2)[0][1].name == expected
+
+
+def test_acc_rate_and_acc_estimate_both_surface_for_one_query():
+    names = [entry.name for _score, entry in search_registry("ACC levy for a roofer", 2)]
+    assert set(names) == {"acc_levy_estimate", "acc_work_levy_rates"}
 
 
 def test_empty_query_returns_nothing():

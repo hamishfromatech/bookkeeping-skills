@@ -29,9 +29,20 @@ to the repository as a product.
 - Registry entries for `sales_tax` and `sum_amounts` gained the phrasing people
   actually use ("including tax", "add up invoices").
 
+### Fixed after end-to-end testing
+
+- "I run a roofing business, what will ACC cost on 120k" ranked the rate *lookup*
+  above the *estimator*. Cost phrasing now favours `acc_levy_estimate`; rate phrasing
+  still favours `acc_work_levy_rates`.
+- "is a work laptop deductible" tied between `mileage_deduction` and
+  `schedule-c-categories` and lost the tie alphabetically, sending a tax question to
+  a mileage calculator. Ties now prefer the procedure when the query reads as a
+  question, and the deductibility entry carries the asset words people type
+  (laptop, computer, phone, tools, equipment).
+
 ### Changed
 
-- 24 tools in `all` mode (23 + `search_tools`); 169 server tests.
+- 24 tools in `all` mode (23 + `search_tools`); 172 server tests.
 
 ## 3.5 — 2026-11-06
 
