@@ -19,6 +19,7 @@ Run it over stdio (the default) for Claude Code, Codex, Cursor or any MCP host:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from typing import Annotated, Any
@@ -52,6 +53,13 @@ from .models import (
     ReconciliationResult,
     SalesTaxResult,
     SelfEmploymentTaxResult,
+)
+from .registry import (
+    CORE_TOOLS,
+    REGISTRY,
+    SKILL_ENTRIES,
+    groups as registry_groups,
+    search_registry,
 )
 from .runner import evaluate_expression, run_python as exec_python
 from .money import MoneyError
@@ -96,9 +104,17 @@ def _repo_error(exc: RepositoryError) -> ValueError:
     return ValueError(str(exc))
 
 
-def build_server(root: Path | None = None) -> FastMCP:
-    """Build the server. ``root`` overrides jurisdiction-pack discovery."""
+def build_server(root: Path | None = None, tool_mode: str | None = None) -> FastMCP:
+    """Build the server.
+
+    ``root`` overrides jurisdiction-pack discovery. ``tool_mode`` is "all" (default,
+    every tool listed) or "search" (six tools plus ``run_tool``), also settable
+    with BOOKKEEPING_MCP_TOOL_MODE.
+    """
     repo_root = root or find_repo_root()
+    tool_mode = (tool_mode or os.environ.get("BOOKKEEPING_MCP_TOOL_MODE", "all")).strip().lower()
+    if tool_mode not in {"all", "search"}:
+        raise ValueError("tool_mode must be \"all\" or \"search\"")
 
     mcp = FastMCP(
         name="bookkeeping-calc",
@@ -595,6 +611,132 @@ def build_server(root: Path | None = None) -> FastMCP:
             classification=row.classification,
             **result,
         )
+
+    # ------------------------------------------------------- tool discovery
+
+    manager = getattr(mcp, "_tool_manager", None)
+    live = getattr(manager, "_tools", None) if manager is not None else None
+    if not isinstance(live, dict):
+        raise RuntimeError(
+            "This fastmcp build does not expose the tool registry, so the search layer "
+            "cannot be built. Install fastmcp>=2.1."
+        )
+
+    snapshot = dict(live)
+
+    @mcp.tool()
+    def search_tools(
+        query: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "What you want to do, in your own words: 'how much tax do I owe this "
+                    "quarter', 'split this receipt', 'ACC levy for a roofer'. Omit to list groups."
+                )
+            ),
+        ] = None,
+        detail: Annotated[
+            str | None,
+            Field(description="A tool name to return the full parameter schema for"),
+        ] = None,
+        limit: Annotated[int, Field(description="Maximum matches to return, 1-15")] = 5,
+    ) -> dict:
+        """Find the right tool for a job, in natural language.
+
+        Use this first when you are unsure which of the bookkeeping tools applies.
+        Returns the best matches with their required parameters and a ready-to-run
+        example. In search mode, call `run_tool` with the matched name.
+        """
+        if detail:
+            target = snapshot.get(detail)
+            if target is None:
+                return {
+                    "error": f"Unknown tool {detail!r}",
+                    "available": sorted(n for n in snapshot if n not in {"search_tools", "run_tool"}),
+                }
+            entry = next((e for e in REGISTRY if e.name == detail), None)
+            return {
+                "name": detail,
+                "summary": entry.summary if entry else (target.description or "").splitlines()[0],
+                "parameters": target.parameters,
+                "example_arguments": entry.example if entry else None,
+            }
+
+        if not query:
+            return {
+                "tool_count": len([n for n in snapshot if n not in {"search_tools", "run_tool"}]),
+                "groups": registry_groups(),
+                "hint": "Pass a query to rank tools, or detail='<name>' for a full schema.",
+            }
+
+        limit = max(1, min(int(limit or 5), 15))
+        matches = search_registry(query, limit)
+        if not matches:
+            return {
+                "query": query,
+                "matched": 0,
+                "groups": registry_groups(),
+                "hint": "No match. Try a different phrase or pass detail='<tool name>'.",
+            }
+
+        return {
+            "query": query,
+            "matched": len(matches),
+            "results": [entry.to_dict() for _score, entry in matches],
+        }
+
+    def run_tool(
+        name: Annotated[str, Field(description="Tool name returned by search_tools")],
+        arguments: Annotated[
+            dict[str, Any] | None,
+            Field(description="Arguments object for that tool, as shown in example_arguments"),
+        ] = None,
+    ) -> dict:
+        """Execute any bookkeeping tool by name.
+
+        Use this after `search_tools` when the tool you need is not listed
+        individually. Arguments are validated by the tool itself.
+        """
+        target = snapshot.get(name)
+        if target is None:
+            skill = next((entry for entry in SKILL_ENTRIES if entry.name == name), None)
+            if skill is not None:
+                raise ValueError(
+                    f"{name!r} is a skill, not a tool. Read the resource "
+                    f"{skill.resource or f'skill://{name}'} instead."
+                )
+            raise ValueError(
+                f"Unknown tool {name!r}. Use search_tools to find one, or detail='{name}' "
+                "to check the name."
+            )
+        if name in {"search_tools", "run_tool"}:
+            raise ValueError("run_tool cannot call the search layer itself")
+
+        args = dict(arguments or {})
+        required = list((target.parameters or {}).get("required") or [])
+        missing = [key for key in required if key not in args]
+        if missing:
+            raise ValueError(
+                f"{name} is missing required argument(s): {', '.join(missing)}. "
+                f"Accepted: {', '.join(sorted((target.parameters or {}).get('properties') or {}))}"
+            )
+
+        try:
+            result = target.fn(**args)
+        except TypeError as exc:
+            raise ValueError(
+                f"{name} rejected those arguments: {exc}. "
+                f"Accepted: {', '.join(sorted((target.parameters or {}).get('properties') or {}))}"
+            ) from exc
+
+        payload = result.model_dump() if hasattr(result, "model_dump") else result
+        return {"tool": name, "result": payload}
+
+    if tool_mode == "search":
+        mcp.tool()(run_tool)
+        for name in list(snapshot):
+            if name not in CORE_TOOLS:
+                live.pop(name, None)
 
     return mcp
 

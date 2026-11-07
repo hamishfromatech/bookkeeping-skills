@@ -148,13 +148,14 @@ pip install -e ./mcp-server
 }
 ```
 
-23 tools in five groups:
+24 tools in five groups:
 
 - **Jurisdiction constants** — `list_jurisdictions`, `get_constants`. Returns the value, extracted numbers, source URL and verified date from `jurisdictions/*.md`, and warns when a pack is stale.
 - **Money and tax** — `sum_amounts`, `round_amount`, `percent_calculation`, `margin_and_markup`, `sales_tax`, `allocate_amount`, `verify_line_items`.
 - **Domain** — mileage across rate periods, both home-office methods, straight-line and declining-balance depreciation, first-year expensing order, self-employment tax, estimated-tax safe harbour, reconciliation with diagnostics, AR aging.
 - **New Zealand ACC** — `acc_work_levy_rates` and `acc_levy_estimate`, including the 2026/27 tradie work-levy schedule, the Working Safer and earners' levies, and the liable-earnings cap.
 - **Calculation** — `calculate` (Decimal arithmetic in a whitelisted AST) and `run_python` (isolated child process, timeout, rlimits).
+- **Discovery** — `search_tools`, plus a `BOOKKEEPING_MCP_TOOL_MODE=search` mode that lists six tools instead of 24 (~900 tokens instead of ~4,000) and reaches the rest by name.
 
 Resources expose pack summaries, raw packs and raw `SKILL.md` files, so an agent reads the procedure as a resource and does the maths with a tool.
 

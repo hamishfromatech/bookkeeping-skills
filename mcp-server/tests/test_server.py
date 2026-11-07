@@ -33,6 +33,7 @@ EXPECTED_TOOLS = {
     "run_python",
     "acc_work_levy_rates",
     "acc_levy_estimate",
+    "search_tools",
 }
 
 
@@ -239,3 +240,110 @@ async def test_acc_levy_estimate_rejects_unknown_trade(server):
     async with Client(server) as client:
         with pytest.raises(Exception, match="No ACC classification unit"):
             await call(client, "acc_levy_estimate", {"liable_income": 100000, "trade": "zzzz"})
+
+
+# ------------------------------------------------------------ search layer
+
+
+async def test_search_tools_is_listed_in_all_mode(server):
+    async with Client(server) as client:
+        names = {tool.name for tool in await client.list_tools()}
+    assert "search_tools" in names
+    assert "run_tool" not in names, "run_tool should only exist in search mode"
+
+
+async def test_search_mode_trims_the_tool_list(server, repo_root: Path):
+    trimmed = build_server(repo_root, tool_mode="search")
+    async with Client(trimmed) as client:
+        names = {tool.name for tool in await client.list_tools()}
+    assert names == {
+        "search_tools",
+        "run_tool",
+        "get_constants",
+        "list_jurisdictions",
+        "calculate",
+        "run_python",
+    }
+
+
+async def test_invalid_tool_mode_rejected(repo_root: Path):
+    with pytest.raises(ValueError, match="tool_mode"):
+        build_server(repo_root, tool_mode="nonsense")
+
+
+async def test_search_tools_overview_without_query(server):
+    async with Client(server) as client:
+        result = await call(client, "search_tools", {})
+    assert result["tool_count"] == 23
+    assert "constants" in result["groups"]
+    assert "nz-acc" in result["groups"]
+    assert "hint" in result
+
+
+async def test_search_tools_ranks_natural_language(server):
+    async with Client(server) as client:
+        result = await call(client, "search_tools", {"query": "how much tax do I owe this quarter"})
+    assert result["matched"] >= 1
+    top = result["results"][0]
+    assert top["name"] == "estimated_tax_safe_harbor"
+    assert top["kind"] == "tool"
+    assert "prior_year_tax" in top["required_params"]
+    assert "example_arguments" in top
+
+
+async def test_search_tools_returns_skills_with_a_resource(server):
+    async with Client(server) as client:
+        result = await call(client, "search_tools", {"query": "is this expense deductible"})
+    top = result["results"][0]
+    assert top["kind"] == "skill"
+    assert top["name"] == "schedule-c-categories"
+    assert top["read_resource"] == "skill://schedule-c-categories"
+
+
+async def test_search_tools_detail_returns_schema(server):
+    async with Client(server) as client:
+        result = await call(client, "search_tools", {"detail": "sales_tax"})
+    assert result["name"] == "sales_tax"
+    assert set(result["parameters"]["properties"]) == {"amount", "rate_percent", "inclusive"}
+    assert result["example_arguments"]["rate_percent"] == 10
+
+
+async def test_search_tools_handles_no_match(server):
+    async with Client(server) as client:
+        result = await call(client, "search_tools", {"query": "zzzz qqqq"})
+    assert result["matched"] == 0
+    assert result["groups"]
+
+
+async def test_run_tool_executes_a_hidden_tool_in_search_mode(repo_root: Path):
+    trimmed = build_server(repo_root, tool_mode="search")
+    async with Client(trimmed) as client:
+        result = await call(
+            client,
+            "run_tool",
+            {"name": "sales_tax", "arguments": {"amount": 110, "rate_percent": 10, "inclusive": True}},
+        )
+    assert result["tool"] == "sales_tax"
+    assert result["result"]["net"] == 100.0
+    assert result["result"]["gross"] == 110.0
+
+
+async def test_run_tool_reports_missing_arguments(repo_root: Path):
+    trimmed = build_server(repo_root, tool_mode="search")
+    async with Client(trimmed) as client:
+        with pytest.raises(Exception, match="missing required argument"):
+            await call(client, "run_tool", {"name": "sales_tax", "arguments": {"amount": 110}})
+
+
+async def test_run_tool_rejects_unknown_tool(repo_root: Path):
+    trimmed = build_server(repo_root, tool_mode="search")
+    async with Client(trimmed) as client:
+        with pytest.raises(Exception, match="Unknown tool"):
+            await call(client, "run_tool", {"name": "nope", "arguments": {}})
+
+
+async def test_run_tool_points_skills_at_their_resource(repo_root: Path):
+    trimmed = build_server(repo_root, tool_mode="search")
+    async with Client(trimmed) as client:
+        with pytest.raises(Exception, match="skill://schedule-c-categories"):
+            await call(client, "run_tool", {"name": "schedule-c-categories", "arguments": {}})

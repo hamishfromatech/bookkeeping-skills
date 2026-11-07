@@ -3,6 +3,36 @@
 All notable changes to this skill pack. Versions apply to the skill content, not
 to the repository as a product.
 
+## 3.6 — 2026-11-06
+
+### Added
+
+- **`search_tools`**: a natural-language tool finder. Ask "how much tax do I owe this
+  quarter" or "ACC levy for a roofer" and get the matching tool with its required
+  parameters and a ready-to-run example, instead of reading every schema.
+- **`BOOKKEEPING_MCP_TOOL_MODE=search`**: lists six tools instead of 24 and reaches
+  the rest by name through **`run_tool`**. Tool payload drops from ~4,000 tokens to
+  ~900, which is the point for small or cheap models.
+- **Skills are searchable too**, tagged `kind: "skill"` with the resource URI to
+  read. Without this, "is this expense deductible" resolved to the nearest
+  calculator (`first_year_asset_expense`), which is the wrong answer.
+- A registry-drift test: every live tool must have exactly one entry, every skill
+  folder must have one, and no entry may reference something that does not exist.
+
+### Fixed
+
+- Tool matching was substring-based, so `"on"` matched inside `bonus`, `"new"`
+  matched `New Zealand` and hijacked unrelated queries, and the amount `"110"`
+  matched `100%/110%` in an estimated-tax description. Matching is now stemmed
+  whole-word, with a stopword list and numeric tokens ignored unless they are a
+  form or section number (`179`, `1099`, `1040`, …).
+- Registry entries for `sales_tax` and `sum_amounts` gained the phrasing people
+  actually use ("including tax", "add up invoices").
+
+### Changed
+
+- 24 tools in `all` mode (23 + `search_tools`); 169 server tests.
+
 ## 3.5 — 2026-11-06
 
 ### Fixed

@@ -156,6 +156,60 @@ The estimate charges all three levies on one base, capped at the maximum liable 
 | `calculate` | Decimal arithmetic in a whitelisted AST |
 | `run_python` | Isolated child process, timeout, captured output |
 
+## Finding the right tool
+
+`search_tools` takes a natural-language question and returns the best matches, so a
+model does not have to read 24 schemas to pick one.
+
+```json
+{"query": "how much tax do I owe this quarter"}
+→ estimated_tax_safe_harbor  (required: prior_year_tax, example arguments included)
+```
+
+```json
+{"query": "is this expense deductible"}
+→ schedule-c-categories  kind: "skill", read_resource: "skill://schedule-c-categories"
+```
+
+Results carry `kind`. A **tool** comes back with its required parameters and a
+ready-to-run `example_arguments`. A **skill** comes back with the resource URI to
+read — because for questions like "is this deductible" the right answer is a
+procedure, not a calculator.
+
+`search_tools` also works with no query (lists the groups) and with
+`detail="sales_tax"` (returns the full parameter schema for one tool).
+
+### Search mode for small models
+
+By default every tool is listed, which costs ~4,000 tokens of schema on every
+request. Set one environment variable to trade that for a round trip:
+
+```sh
+export BOOKKEEPING_MCP_TOOL_MODE=search
+```
+
+| Mode | Tools listed | Tool payload |
+|---|---|---|
+| `all` (default) | 24 | ~16,000 chars / **~4,000 tokens** |
+| `search` | 6 | ~3,600 chars / **~900 tokens** |
+
+In search mode only `search_tools`, `run_tool`, `get_constants`,
+`list_jurisdictions`, `calculate` and `run_python` are listed. Everything else is
+reached by name through `run_tool`:
+
+```json
+{"name": "run_tool",
+ "arguments": {"name": "sales_tax",
+               "arguments": {"amount": 110, "rate_percent": 10, "inclusive": true}}}
+```
+
+`run_tool` validates required arguments and returns the same payload the direct
+tool would. Calling a skill through it is refused with a pointer to the resource.
+
+Use `search` mode when the host is a small or cheap model, or when context is
+tight. Use `all` mode when the model is strong and you would rather avoid the
+extra round trip.
+
 ## Resources
 
 | URI | Content |
